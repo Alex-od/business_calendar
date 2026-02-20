@@ -198,7 +198,7 @@ private fun MonthGrid(
     Column(Modifier.fillMaxWidth()) {
         weeks.forEach { week ->
             // Fixed row height — tall enough for day number + 2 events × 2 wrapped lines
-            Row(Modifier.fillMaxWidth().height(82.dp)) {
+            Row(Modifier.fillMaxWidth().height(110.dp)) {
                 week.forEach { day ->
                     Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                         when (day) {
@@ -247,22 +247,24 @@ private fun MonthGrid(
                                         textAlign  = TextAlign.Center,
                                     )
                                     // Event summaries (up to 2) — tight leading
-                                    dayEvents.take(2).forEach { event ->
-                                        Text(
-                                            text     = event.title,
-                                            style    = MaterialTheme.typography.labelSmall.copy(
-                                                fontSize        = 8.sp,
-                                                lineHeight      = 9.sp,
-                                                lineHeightStyle = LineHeightStyle(
-                                                    alignment = LineHeightStyle.Alignment.Center,
-                                                    trim      = LineHeightStyle.Trim.Both,
+                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        dayEvents.take(10).forEach { event ->
+                                            Text(
+                                                text     = event.title,
+                                                style    = MaterialTheme.typography.labelSmall.copy(
+                                                    fontSize        = 8.sp,
+                                                    lineHeight      = 9.sp,
+                                                    lineHeightStyle = LineHeightStyle(
+                                                        alignment = LineHeightStyle.Alignment.Center,
+                                                        trim      = LineHeightStyle.Trim.Both,
+                                                    ),
                                                 ),
-                                            ),
-                                            color    = eventColor,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis,
-                                            modifier = Modifier.fillMaxWidth(),
-                                        )
+                                                color    = eventColor,
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis,
+                                                modifier = Modifier.fillMaxWidth(),
+                                            )
+                                        }
                                     }
                                 }
                             }
