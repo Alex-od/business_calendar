@@ -22,7 +22,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "My Business Calendar"
+rootProject.name = "Radiant Days"
 include(":app")
 include(":domain")
 include(":data")

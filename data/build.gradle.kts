@@ -5,7 +5,7 @@ plugins {
 }
 
 android {
-    namespace  = "ua.danichapps.mybusinesscalendar.data"
+    namespace  = "ua.danichapps.radiantdays.data"
     compileSdk = 36
 
     defaultConfig {

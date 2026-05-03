@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "ua.danichapps.mybusinesscalendar"
+    namespace = "ua.danichapps.radiantdays"
     compileSdk {
         version = release(36) {
             minorApiLevel = 1
@@ -12,7 +12,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "ua.danichapps.mybusinesscalendar"
+        applicationId = "ua.danichapps.radiantdays"
         minSdk        = 24
         targetSdk     = 36
         versionCode   = 1
@@ -22,8 +22,15 @@ android {
     }
 
     buildTypes {
+        debug {
+            buildConfigField("String", "WS_BRIDGE_HOST", "\"10.0.2.2\"")
+            buildConfigField("int", "WS_BRIDGE_PORT", "8000")
+        }
         release {
             isMinifyEnabled = false
+            // Keep fields for release compilation parity; endpoint is dev-only by policy.
+            buildConfigField("String", "WS_BRIDGE_HOST", "\"10.0.2.2\"")
+            buildConfigField("int", "WS_BRIDGE_PORT", "8000")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
@@ -33,6 +40,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 
@@ -70,6 +78,10 @@ dependencies {
 
     // Coroutines
     implementation(libs.kotlinx.coroutines.android)
+
+    // WebSocket bridge
+    implementation(libs.okhttp)
+    implementation(libs.kotlinx.serialization.json)
 
     // Tests
     testImplementation(libs.junit)
