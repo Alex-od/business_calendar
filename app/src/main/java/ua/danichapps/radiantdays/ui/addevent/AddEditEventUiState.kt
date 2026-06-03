@@ -18,7 +18,8 @@ data class AddEditEventUiState(
     // Form fields
     val description: String = "",
     val startTimeMillis: Long = System.currentTimeMillis(),
-    val notificationMinutesBefore: Int = 30,
+    val notificationMinutesBefore: Int = 0,
+    val alarmTimeMillis: Long? = null,
     val isCompleted: Boolean = false,
     val folders: List<Folder> = emptyList(),
     val selectedFolderGuid: String? = null,

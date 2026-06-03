@@ -12,7 +12,9 @@ package ua.danichapps.radiantdays.domain.model
  * @property endTimeMillis   End of the event in epoch milliseconds (UTC).
  * @property isAllDay     Whether the event occupies the whole day (time part is ignored).
  * @property color        Visual accent color for UI rendering.
- * @property notificationMinutesBefore Minutes before [startTimeMillis] to trigger a reminder.
+ * @property alarmTimeMillis Optional reminder anchor time. `null` means the note has no alarm.
+ * @property notificationMinutesBefore Minutes before [alarmTimeMillis] to trigger a reminder.
+ *   Ignored when [alarmTimeMillis] is `null`. Effective fire time = alarmTimeMillis - this offset.
  * @property folderGuid   Optional folder GUID this event belongs to.
  */
 data class CalendarEvent(
@@ -23,6 +25,7 @@ data class CalendarEvent(
     val isAllDay: Boolean = false,
     val color: EventColor = EventColor.DEFAULT,
     val notificationMinutesBefore: Int = 30,
+    val alarmTimeMillis: Long? = null,
     val isCompleted: Boolean = false,
     val folderGuid: String? = null,
 )

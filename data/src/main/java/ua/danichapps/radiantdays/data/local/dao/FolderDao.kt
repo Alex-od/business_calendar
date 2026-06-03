@@ -10,7 +10,7 @@ import ua.danichapps.radiantdays.data.local.entity.FolderEntity
 
 @Dao
 interface FolderDao {
-    @Query("SELECT * FROM folders ORDER BY name COLLATE NOCASE ASC")
+    @Query("SELECT * FROM folders ORDER BY is_pinned DESC, name COLLATE NOCASE ASC")
     fun getFolders(): Flow<List<FolderEntity>>
 
     @Query(

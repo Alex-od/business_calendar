@@ -14,7 +14,13 @@ sealed class Screen(val route: String) {
     /** Empty settings placeholder. */
     data object Settings : Screen("settings")
 
-    data object FolderSettings : Screen("folder_settings")
+    data object FolderSettings : Screen("folder_settings?returnAfterCreate={returnAfterCreate}") {
+        const val ARG_RETURN_AFTER_CREATE = "returnAfterCreate"
+        const val RESULT_CREATED_FOLDER_GUID = "createdFolderGuid"
+
+        fun createRoute(returnAfterCreate: Boolean = false) =
+            "folder_settings?returnAfterCreate=$returnAfterCreate"
+    }
 
     /** Screen for creating a new event, pre-filled with [selectedDayMillis]. */
     data object AddEvent : Screen("add_event/{selectedDayMillis}") {
@@ -26,5 +32,11 @@ sealed class Screen(val route: String) {
     data object EditEvent : Screen("edit_event/{eventId}") {
         fun createRoute(eventId: Long) = "edit_event/$eventId"
         const val ARG_EVENT_ID = "eventId"
+    }
+
+    /** Notes list for a folder (including virtual «Общее»). */
+    data object FolderNotes : Screen("folder_notes/{folderGuid}") {
+        fun createRoute(folderGuid: String) = "folder_notes/$folderGuid"
+        const val ARG_FOLDER_GUID = "folderGuid"
     }
 }

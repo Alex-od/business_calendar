@@ -33,6 +33,12 @@ class CalendarEventRepositoryImpl(
     override fun getAllEvents(): Flow<List<CalendarEvent>> =
         dao.getAllEvents().map { entities -> entities.map { it.toDomain() } }
 
+    override fun getEventsInGeneralFolder(): Flow<List<CalendarEvent>> =
+        dao.getEventsInGeneralFolder().map { entities -> entities.map { it.toDomain() } }
+
+    override fun getEventsByFolderGuid(folderGuid: String): Flow<List<CalendarEvent>> =
+        dao.getEventsByFolder(folderGuid).map { entities -> entities.map { it.toDomain() } }
+
     override suspend fun getEventById(id: Long): CalendarEvent? =
         dao.getEventById(id)?.toDomain()
 
@@ -59,6 +65,13 @@ class CalendarEventRepositoryImpl(
 
     override suspend fun getUpcomingEvents(fromMillis: Long, toMillis: Long): DomainResult<List<CalendarEvent>> =
         runCatching { dao.getUpcomingEvents(fromMillis, toMillis).map { it.toDomain() } }
+            .fold(
+                onSuccess = { DomainResult.Success(it) },
+                onFailure = { DomainResult.Error(it) },
+            )
+
+    override suspend fun getPendingReminders(fromMillis: Long): DomainResult<List<CalendarEvent>> =
+        runCatching { dao.getPendingReminders(fromMillis).map { it.toDomain() } }
             .fold(
                 onSuccess = { DomainResult.Success(it) },
                 onFailure = { DomainResult.Error(it) },

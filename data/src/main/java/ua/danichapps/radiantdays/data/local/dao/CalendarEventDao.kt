@@ -34,6 +34,24 @@ interface CalendarEventDao {
     @Query("SELECT * FROM notes ORDER BY start_time_millis ASC")
     fun getAllEvents(): Flow<List<NoteEntity>>
 
+    @Query(
+        """
+        SELECT * FROM notes
+        WHERE folder_guid IS NULL
+        ORDER BY start_time_millis ASC
+        """
+    )
+    fun getEventsInGeneralFolder(): Flow<List<NoteEntity>>
+
+    @Query(
+        """
+        SELECT * FROM notes
+        WHERE folder_guid = :folderGuid
+        ORDER BY start_time_millis ASC
+        """
+    )
+    fun getEventsByFolder(folderGuid: String): Flow<List<NoteEntity>>
+
     /** Returns a single event by its [id], or `null` if not found. */
     @Query("SELECT * FROM notes WHERE id = :id LIMIT 1")
     suspend fun getEventById(id: Long): NoteEntity?
@@ -54,15 +72,28 @@ interface CalendarEventDao {
     suspend fun deleteEventById(id: Long): Int
 
     /**
-     * Returns all events starting within [[fromMillis], [toMillis]).
-     * Used for notification scheduling and widget data.
+     * Reminder fire time = alarm_time_millis - notification_minutes_before * 60000.
      */
     @Query(
         """
         SELECT * FROM notes
-        WHERE start_time_millis >= :fromMillis AND start_time_millis < :toMillis
-        ORDER BY start_time_millis ASC
+        WHERE alarm_time_millis IS NOT NULL
+            AND is_completed = 0
+            AND (alarm_time_millis - (notification_minutes_before * 60000)) >= :fromMillis
+            AND (alarm_time_millis - (notification_minutes_before * 60000)) < :toMillis
+        ORDER BY alarm_time_millis ASC
         """
     )
     suspend fun getUpcomingEvents(fromMillis: Long, toMillis: Long): List<NoteEntity>
+
+    @Query(
+        """
+        SELECT * FROM notes
+        WHERE alarm_time_millis IS NOT NULL
+            AND is_completed = 0
+            AND (alarm_time_millis - (notification_minutes_before * 60000)) > :fromMillis
+        ORDER BY alarm_time_millis ASC
+        """
+    )
+    suspend fun getPendingReminders(fromMillis: Long): List<NoteEntity>
 }

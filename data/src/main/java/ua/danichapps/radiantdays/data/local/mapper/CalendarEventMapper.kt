@@ -16,6 +16,7 @@ fun NoteEntity.toDomain(): CalendarEvent = CalendarEvent(
     isAllDay                  = isAllDay,
     color                     = color.toEventColor(),
     notificationMinutesBefore = notificationMinutesBefore,
+    alarmTimeMillis           = alarmTimeMillis,
     isCompleted               = isCompleted,
     folderGuid                = folderGuid,
 )
@@ -29,6 +30,7 @@ fun CalendarEvent.toEntity(): NoteEntity = NoteEntity(
     isAllDay                  = isAllDay,
     color                     = color.name,
     notificationMinutesBefore = notificationMinutesBefore,
+    alarmTimeMillis           = alarmTimeMillis,
     isCompleted               = isCompleted,
     folderGuid                = folderGuid,
 )
@@ -44,6 +46,7 @@ fun CalendarEventDto.toDomain(): CalendarEvent = CalendarEvent(
     isAllDay                  = isAllDay,
     color                     = color.toEventColor(),
     notificationMinutesBefore = notificationMinutesBefore,
+    alarmTimeMillis           = alarmTimeMillis,
     isCompleted               = isCompleted,
     folderGuid                = folderGuid,
 )
@@ -57,6 +60,7 @@ fun CalendarEvent.toDto(): CalendarEventDto = CalendarEventDto(
     isAllDay                  = isAllDay,
     color                     = color.name,
     notificationMinutesBefore = notificationMinutesBefore,
+    alarmTimeMillis           = alarmTimeMillis,
     isCompleted               = isCompleted,
     folderGuid                = folderGuid,
 )

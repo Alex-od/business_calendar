@@ -2,6 +2,7 @@ package ua.danichapps.radiantdays.ui.calendar
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -20,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
@@ -48,9 +50,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,12 +69,12 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
-// в”Ђв”Ђ Constants (no reason to allocate on every recomposition) в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Constants
 
 /** Day-of-week header labels. Sunday-first to match [Calendar.DAY_OF_WEEK]. */
 private val DAY_LABELS = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 
-// в”Ђв”Ђ Screen в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Screen
 
 /**
  * Root composable for the calendar screen.
@@ -84,13 +89,14 @@ fun CalendarScreen(
     onAddEvent: (Long) -> Unit,
     onEditEvent: (Long) -> Unit,
     onOpenSettings: () -> Unit,
+    onOpenFolders: () -> Unit,
     viewModel: CalendarViewModel = koinViewModel(),
 ) {
-    // FIX #3 вЂ” collectAsStateWithLifecycle stops collection when the screen is not visible
+    // FIX #3: collectAsStateWithLifecycle stops collection when the screen is not visible
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
-    // FIX #1/#2 вЂ” consume one-shot events from the Channel (not from UiState fields)
+    // FIX #1/#2: consume one-shot events from the Channel (not from UiState fields)
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
@@ -101,7 +107,10 @@ fun CalendarScreen(
 
     Scaffold(
         topBar = {
-            CalendarTopBar(onOpenSettings = onOpenSettings)
+            CalendarTopBar(
+                onOpenSettings = onOpenSettings,
+                onOpenFolders  = onOpenFolders,
+            )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
@@ -115,45 +124,58 @@ fun CalendarScreen(
                 .fillMaxSize()
                 .padding(padding),
         ) {
-            MonthHeader(
-                currentMonthMillis = uiState.currentMonthMillis,
-                onPrevious         = viewModel::navigateToPreviousMonth,
-                onNext             = viewModel::navigateToNextMonth,
-            )
-            WeekDayHeaders()
-            MonthGrid(
-                currentMonthMillis = uiState.currentMonthMillis,
-                selectedDayMillis  = uiState.selectedDayMillis,
-                eventsForMonth     = uiState.eventsForMonth,
-                onDaySelected      = viewModel::selectDay,
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            if (uiState.isLoading) {
-                Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else {
-                EventListForDay(
-                    events        = uiState.eventsForDay,
-                    onEditEvent   = onEditEvent,
-                    onDeleteEvent = viewModel::deleteEvent,
+            Column(
+                modifier = Modifier.swipeMonths(
+                    onPreviousMonth = viewModel::navigateToPreviousMonth,
+                    onNextMonth     = viewModel::navigateToNextMonth,
+                ),
+            ) {
+                MonthHeader(
+                    currentMonthMillis = uiState.currentMonthMillis,
+                    onPrevious         = viewModel::navigateToPreviousMonth,
+                    onNext             = viewModel::navigateToNextMonth,
                 )
+                WeekDayHeaders()
+                MonthGrid(
+                    currentMonthMillis = uiState.currentMonthMillis,
+                    selectedDayMillis  = uiState.selectedDayMillis,
+                    eventsForMonth     = uiState.eventsForMonth,
+                    onDaySelected      = viewModel::selectDay,
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+            ) {
+                if (uiState.isLoading) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
+                } else {
+                    EventListForDay(
+                        events        = uiState.eventsForDay,
+                        onEditEvent   = onEditEvent,
+                        onDeleteEvent = viewModel::deleteEvent,
+                    )
+                }
             }
         }
     }
 }
 
-// в”Ђв”Ђ Sub-composables в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Sub-composables
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CalendarTopBar(
     onOpenSettings: () -> Unit,
+    onOpenFolders: () -> Unit,
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
 
     TopAppBar(
-        title = { Text("Radiant Days") },
+        title = {},
         actions = {
             IconButton(onClick = { isMenuExpanded = true }) {
                 Icon(Icons.Default.MoreVert, contentDescription = "Open menu")
@@ -167,6 +189,13 @@ private fun CalendarTopBar(
                     onClick = {
                         isMenuExpanded = false
                         onOpenSettings()
+                    },
+                )
+                DropdownMenuItem(
+                    text = { Text("Folders") },
+                    onClick = {
+                        isMenuExpanded = false
+                        onOpenFolders()
                     },
                 )
             }
@@ -200,7 +229,7 @@ private fun MonthHeader(
 
 @Composable
 private fun WeekDayHeaders() {
-    // FIX #6 вЂ” DAY_LABELS is a top-level val, no allocation here
+    // FIX #6: DAY_LABELS is a top-level val, no allocation here
     Row(Modifier.fillMaxWidth()) {
         DAY_LABELS.forEach { label ->
             Text(
@@ -232,8 +261,7 @@ private fun MonthGrid(
 
     Column(Modifier.fillMaxWidth()) {
         weeks.forEach { week ->
-            // Fixed row height вЂ” tall enough for day number + 2 events Г— 2 wrapped lines
-            Row(Modifier.fillMaxWidth().height(110.dp)) {
+            Row(Modifier.fillMaxWidth().height(64.dp)) {
                 week.forEach { day ->
                     Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
                         when (day) {
@@ -242,6 +270,7 @@ private fun MonthGrid(
                                 val isSelected = sameDay(selectedCal, day.millis)
                                 val isToday    = sameDay(todayCal, day.millis)
                                 val dayEvents  = eventsForMonth[day.millis] ?: emptyList()
+                                val hasAlarm   = dayEvents.any { it.alarmTimeMillis != null }
 
                                 val bgColor = when {
                                     isSelected -> MaterialTheme.colorScheme.primary
@@ -267,23 +296,37 @@ private fun MonthGrid(
                                         .padding(horizontal = 3.dp, vertical = 3.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                 ) {
-                                    // Day number вЂ” lineHeight = fontSize, trim both ends
-                                    Text(
-                                        text       = day.number.toString(),
-                                        style      = MaterialTheme.typography.bodySmall.copy(
-                                            lineHeight      = 12.sp,
-                                            lineHeightStyle = LineHeightStyle(
-                                                alignment = LineHeightStyle.Alignment.Center,
-                                                trim      = LineHeightStyle.Trim.Both,
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center,
+                                    ) {
+                                        Text(
+                                            text       = day.number.toString(),
+                                            style      = MaterialTheme.typography.bodySmall.copy(
+                                                lineHeight      = 12.sp,
+                                                lineHeightStyle = LineHeightStyle(
+                                                    alignment = LineHeightStyle.Alignment.Center,
+                                                    trim      = LineHeightStyle.Trim.Both,
+                                                ),
                                             ),
-                                        ),
-                                        fontWeight = FontWeight.Bold,
-                                        color      = numberColor,
-                                        textAlign  = TextAlign.Center,
-                                    )
-                                    // Event summaries (up to 2) вЂ” tight leading
+                                            fontWeight = FontWeight.Bold,
+                                            color      = numberColor,
+                                            textAlign  = TextAlign.Center,
+                                        )
+                                        if (hasAlarm) {
+                                            Icon(
+                                                imageVector = Icons.Default.Alarm,
+                                                contentDescription = null,
+                                                modifier = Modifier
+                                                    .padding(start = 2.dp)
+                                                    .size(10.dp),
+                                                tint = numberColor,
+                                            )
+                                        }
+                                    }
+                                    // Event summaries (up to 2): tight leading
                                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        dayEvents.take(10).forEach { event ->
+                                        dayEvents.take(2).forEach { event ->
                                             Text(
                                                 text     = event.description,
                                                 style    = MaterialTheme.typography.labelSmall.copy(
@@ -354,8 +397,10 @@ private fun EventCard(
     // SimpleDateFormat is not thread-safe; one instance per composable is safe in single-threaded Compose
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
 
+    val contentAlpha = if (event.isCompleted) 0.5f else 1f
+
     Card(
-        modifier  = Modifier.fillMaxWidth(),
+        modifier  = Modifier.fillMaxWidth().alpha(contentAlpha),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Row(
@@ -369,16 +414,34 @@ private fun EventCard(
             Column(
                 modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
             ) {
-                Text(
-                    text       = event.description,
-                    style      = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines   = 1,
-                    overflow   = TextOverflow.Ellipsis,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (event.alarmTimeMillis != null) {
+                        Icon(
+                            Icons.Default.Alarm,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .padding(end = 6.dp)
+                                .size(16.dp),
+                            tint = MaterialTheme.colorScheme.primary,
+                        )
+                    }
+                    Text(
+                        text       = event.description,
+                        style      = MaterialTheme.typography.bodyLarge.copy(
+                            textDecoration = if (event.isCompleted) {
+                                TextDecoration.LineThrough
+                            } else {
+                                TextDecoration.None
+                            },
+                        ),
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines   = 1,
+                        overflow   = TextOverflow.Ellipsis,
+                    )
+                }
                 if (!event.isAllDay) {
                     Text(
-                        text  = "${timeFormat.format(Date(event.startTimeMillis))} вЂ“ ${timeFormat.format(Date(event.endTimeMillis))}",
+                        text  = "${timeFormat.format(Date(event.startTimeMillis))} - ${timeFormat.format(Date(event.endTimeMillis))}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -401,7 +464,28 @@ private fun EventCard(
     }
 }
 
-// в”Ђв”Ђ Helpers в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
+// Helpers
+
+/** Swipe left → next month; swipe right → previous month. */
+private fun Modifier.swipeMonths(
+    onPreviousMonth: () -> Unit,
+    onNextMonth: () -> Unit,
+    swipeThresholdPx: Float = 80f,
+): Modifier = pointerInput(onPreviousMonth, onNextMonth) {
+    var totalDrag = 0f
+    detectHorizontalDragGestures(
+        onDragStart = { totalDrag = 0f },
+        onDragEnd = {
+            when {
+                totalDrag <= -swipeThresholdPx -> onNextMonth()
+                totalDrag >= swipeThresholdPx -> onPreviousMonth()
+            }
+            totalDrag = 0f
+        },
+        onDragCancel = { totalDrag = 0f },
+        onHorizontalDrag = { _, dragAmount -> totalDrag += dragAmount },
+    )
+}
 
 private sealed interface CalendarDay {
     data object Empty : CalendarDay

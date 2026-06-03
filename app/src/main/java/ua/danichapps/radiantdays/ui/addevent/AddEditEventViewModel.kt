@@ -19,7 +19,10 @@ import ua.danichapps.radiantdays.domain.repository.CalendarEventRepository
 import ua.danichapps.radiantdays.domain.usecase.AddEventUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetFoldersUseCase
 import ua.danichapps.radiantdays.domain.usecase.UpdateEventUseCase
+import ua.danichapps.radiantdays.notification.AlarmScheduler
 import java.util.Calendar
+
+private const val DEFAULT_ALARM_OFFSET_HOURS = 1L
 
 /**
  * ViewModel for add / edit event screen.
@@ -34,6 +37,7 @@ class AddEditEventViewModel(
     private val updateEventUseCase: UpdateEventUseCase,
     private val getFoldersUseCase: GetFoldersUseCase,
     private val repository: CalendarEventRepository,
+    private val alarmScheduler: AlarmScheduler,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddEditEventUiState())
@@ -61,6 +65,7 @@ class AddEditEventViewModel(
                         description               = event.description,
                         startTimeMillis           = event.startTimeMillis,
                         notificationMinutesBefore = event.notificationMinutesBefore,
+                        alarmTimeMillis           = event.alarmTimeMillis,
                         isCompleted               = event.isCompleted,
                         selectedFolderGuid        = event.folderGuid,
                     )
@@ -87,6 +92,13 @@ class AddEditEventViewModel(
 
     fun onDescriptionChange(value: String)    = _uiState.update { it.copy(description = value, descriptionError = null) }
     fun onStartTimeChange(millis: Long)       = _uiState.update { it.copy(startTimeMillis = millis) }
+    fun onAddAlarmClick() = _uiState.update { state ->
+        if (state.alarmTimeMillis != null) return@update state
+        state.copy(alarmTimeMillis = System.currentTimeMillis() + DEFAULT_ALARM_OFFSET_HOURS * 3_600_000L)
+    }
+
+    fun onRemoveAlarmClick() = _uiState.update { it.copy(alarmTimeMillis = null) }
+    fun onAlarmTimeChange(millis: Long)       = _uiState.update { it.copy(alarmTimeMillis = millis) }
     fun onIsCompletedChange(value: Boolean)   = _uiState.update { it.copy(isCompleted = value) }
     fun onNotificationMinutesChange(min: Int) = _uiState.update { it.copy(notificationMinutesBefore = min) }
     fun onFolderSelected(folderGuid: String?)  = _uiState.update { it.copy(selectedFolderGuid = folderGuid) }
@@ -108,6 +120,7 @@ class AddEditEventViewModel(
             endTimeMillis             = state.startTimeMillis + 60 * 60 * 1_000L,
             isAllDay                  = false,
             notificationMinutesBefore = state.notificationMinutesBefore,
+            alarmTimeMillis           = state.alarmTimeMillis,
             isCompleted               = state.isCompleted,
             folderGuid                = state.selectedFolderGuid,
         )
@@ -115,26 +128,36 @@ class AddEditEventViewModel(
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
 
-            val result: DomainResult<Unit> = if (eventId != null) {
+            if (eventId != null) {
                 updateEventUseCase(event)
-            } else {
-                addEventUseCase(event).let { r ->
-                    when (r) {
-                        is DomainResult.Success -> DomainResult.Success(Unit)
-                        is DomainResult.Error   -> r
+                    .onSuccess {
+                        if (event.alarmTimeMillis == null || event.isCompleted) {
+                            alarmScheduler.cancel(event.id)
+                        } else {
+                            alarmScheduler.schedule(event)
+                        }
+                        _uiState.update { it.copy(isLoading = false) }
+                        _events.send(AddEditEventUiEvent.NavigateBack)
                     }
-                }
+                    .onError { _, msg ->
+                        _uiState.update { it.copy(isLoading = false) }
+                        _events.send(AddEditEventUiEvent.ShowError(msg))
+                    }
+            } else {
+                addEventUseCase(event)
+                    .onSuccess { newId ->
+                        val saved = event.copy(id = newId)
+                        if (saved.alarmTimeMillis != null && !saved.isCompleted) {
+                            alarmScheduler.schedule(saved)
+                        }
+                        _uiState.update { it.copy(isLoading = false) }
+                        _events.send(AddEditEventUiEvent.NavigateBack)
+                    }
+                    .onError { _, msg ->
+                        _uiState.update { it.copy(isLoading = false) }
+                        _events.send(AddEditEventUiEvent.ShowError(msg))
+                    }
             }
-
-            result
-                .onSuccess {
-                    _uiState.update { it.copy(isLoading = false) }
-                    _events.send(AddEditEventUiEvent.NavigateBack)
-                }
-                .onError { _, msg ->
-                    _uiState.update { it.copy(isLoading = false) }
-                    _events.send(AddEditEventUiEvent.ShowError(msg))
-                }
         }
     }
 

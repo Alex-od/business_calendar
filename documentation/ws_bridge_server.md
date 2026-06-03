@@ -35,14 +35,14 @@
 4. Результат пробрасывается в соответствующий `Future`.
 5. При дисконнекте очищаются все незавершенные запросы устройства.
 
-### HTTP: `GET /get-events/{device_id}`
+### HTTP: `GET /get-notes/{device_id}`
 Запрашивает у конкретного устройства список событий.
 
 Поведение:
 1. Проверяется, подключено ли устройство.
 2. Генерируется `request_id` (`UUID`).
 3. Создается `Future` и сохраняется в `pending`.
-4. Устройству отправляется команда `get_events`.
+4. Устройству отправляется команда `get_notes`.
 5. Сервер ждет ответ от устройства до таймаута.
 6. В любом случае запись из `pending` удаляется в `finally`.
 
@@ -51,7 +51,7 @@
 ### Команда сервер -> устройство
 ```json
 {
-  "action": "get_events",
+  "action": "get_notes",
   "request_id": "<uuid>"
 }
 ```
@@ -95,7 +95,7 @@
 Все ожидающие `Future` завершаются ошибкой `device disconnected`.
 
 ## Последовательность (high-level)
-1. Клиент вызывает `GET /get-events/{device_id}`.
+1. Клиент вызывает `GET /get-notes/{device_id}`.
 2. Сервер создает `request_id` и сохраняет ожидание в `pending`.
 3. Сервер отправляет команду в WebSocket устройства.
 4. Устройство отвечает JSON с тем же `request_id`.
@@ -119,7 +119,7 @@
 Текущая реализация подходит для локальной/внутренней среды, но для production рекомендуется:
 1. Добавить аутентификацию устройства на WebSocket (`token`, mTLS или подпись).
 2. Ограничить доступ к HTTP endpoint по auth.
-3. Ввести rate limiting на `GET /get-events/{device_id}`.
+3. Ввести rate limiting на `GET /get-notes/{device_id}`.
 4. Валидировать и ограничивать размер входящих payload.
 5. Перевести `print`-логи на структурированный логгер (уровни, trace-id).
 6. Добавить метрики (таймауты, ошибки, latency).
@@ -127,11 +127,15 @@
 ## Как запускать (пример)
 Из папки `mcp-server`:
 ```bash
-uvicorn ws_bridge_server:app --host 0.0.0.0 --port 8080
+uvicorn ws_bridge_server:app --host 0.0.0.0 --port 8000
 ```
 
 ## Быстрый smoke-check
 1. Подключить тестовый WebSocket-клиент как устройство: `/ws/test-device`.
-2. Вызвать `GET /get-events/test-device`.
+2. Вызвать `GET /get-notes/test-device`.
 3. Отправить в WebSocket ответ с тем же `request_id`.
 4. Проверить, что HTTP получил `result`.
+
+## Legacy compatibility
+`GET /get-events/{device_id}` сохранен как временный alias для старых клиентов.
+Новые клиенты должны использовать `GET /get-notes/{device_id}` и action `get_notes`.

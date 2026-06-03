@@ -10,8 +10,13 @@ import org.koin.java.KoinJavaComponent.getKoin
 import ua.danichapps.radiantdays.data.di.dataModule
 import ua.danichapps.radiantdays.di.domainModule
 import ua.danichapps.radiantdays.di.presentationModule
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import ua.danichapps.radiantdays.notification.AlarmScheduler
 import ua.danichapps.radiantdays.notification.EventNotificationManager
-import ua.danichapps.radiantdays.notification.EventNotificationWorker
+import ua.danichapps.radiantdays.notification.ReminderFallbackWorker
 import ua.danichapps.radiantdays.sync.WebSocketBridgeClient
 
 /**
@@ -71,7 +76,10 @@ class RadiantDaysApp : Application() {
         registerActivityLifecycleCallbacks(appLifecycleCallbacks)
 
         EventNotificationManager(this).createNotificationChannel()
-        EventNotificationWorker.schedule(this)
+        ReminderFallbackWorker.schedule(this)
+        CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
+            getKoin().get<AlarmScheduler>().rescheduleAll()
+        }
     }
 
     override fun onTerminate() {

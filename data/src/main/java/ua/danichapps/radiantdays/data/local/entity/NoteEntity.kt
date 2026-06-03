@@ -49,6 +49,9 @@ data class NoteEntity(
     @ColumnInfo(name = "notification_minutes_before")
     val notificationMinutesBefore: Int,
 
+    @ColumnInfo(name = "alarm_time_millis")
+    val alarmTimeMillis: Long? = null,
+
     @ColumnInfo(name = "is_completed", defaultValue = "0")
     val isCompleted: Boolean = false,
 

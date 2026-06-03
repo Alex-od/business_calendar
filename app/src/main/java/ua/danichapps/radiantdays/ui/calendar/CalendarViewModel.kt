@@ -13,6 +13,8 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ua.danichapps.radiantdays.domain.model.onError
+import ua.danichapps.radiantdays.domain.model.onSuccess
+import ua.danichapps.radiantdays.notification.AlarmScheduler
 import ua.danichapps.radiantdays.domain.usecase.DeleteEventUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetEventsForDayUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetEventsForMonthUseCase
@@ -34,6 +36,7 @@ class CalendarViewModel(
     private val getEventsForDayUseCase: GetEventsForDayUseCase,
     private val getEventsForMonthUseCase: GetEventsForMonthUseCase,
     private val deleteEventUseCase: DeleteEventUseCase,
+    private val alarmScheduler: AlarmScheduler,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalendarUiState())
@@ -80,9 +83,11 @@ class CalendarViewModel(
     /** Deletes event [id]; emits [CalendarUiEvent.ShowError] on failure. */
     fun deleteEvent(id: Long) {
         viewModelScope.launch {
-            deleteEventUseCase(id).onError { _, message ->
-                _events.send(CalendarUiEvent.ShowError(message))
-            }
+            deleteEventUseCase(id)
+                .onSuccess { alarmScheduler.cancel(id) }
+                .onError { _, message ->
+                    _events.send(CalendarUiEvent.ShowError(message))
+                }
         }
     }
 

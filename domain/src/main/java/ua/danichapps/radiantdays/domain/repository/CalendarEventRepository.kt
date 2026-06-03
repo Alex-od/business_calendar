@@ -27,6 +27,12 @@ interface CalendarEventRepository {
     /** Returns a cold [Flow] of all events, ordered by start time ascending. */
     fun getAllEvents(): Flow<List<CalendarEvent>>
 
+    /** Notes without a folder (virtual «Общее» folder). */
+    fun getEventsInGeneralFolder(): Flow<List<CalendarEvent>>
+
+    /** Notes assigned to the folder identified by [folderGuid]. */
+    fun getEventsByFolderGuid(folderGuid: String): Flow<List<CalendarEvent>>
+
     /** Fetches a single event by its [id], or `null` if not found. */
     suspend fun getEventById(id: Long): CalendarEvent?
 
@@ -42,8 +48,11 @@ interface CalendarEventRepository {
     suspend fun deleteEvent(id: Long): DomainResult<Unit>
 
     /**
-     * Returns events starting within [[fromMillis], [toMillis]).
-     * Intended for notification scheduling and widget data.
+     * Returns notes whose reminder fire time falls within [[fromMillis], [toMillis]).
+     * Fire time = alarmTimeMillis - notificationMinutesBefore.
      */
     suspend fun getUpcomingEvents(fromMillis: Long, toMillis: Long): DomainResult<List<CalendarEvent>>
+
+    /** Notes with a future reminder fire time, not completed. */
+    suspend fun getPendingReminders(fromMillis: Long): DomainResult<List<CalendarEvent>>
 }

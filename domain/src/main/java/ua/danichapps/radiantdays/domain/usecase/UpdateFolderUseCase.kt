@@ -2,6 +2,7 @@ package ua.danichapps.radiantdays.domain.usecase
 
 import ua.danichapps.radiantdays.domain.model.DomainResult
 import ua.danichapps.radiantdays.domain.model.Folder
+import ua.danichapps.radiantdays.domain.model.Folder.Companion.GENERAL_NAME
 import ua.danichapps.radiantdays.domain.repository.FolderRepository
 
 class UpdateFolderUseCase(
@@ -9,10 +10,16 @@ class UpdateFolderUseCase(
 ) {
     suspend operator fun invoke(folder: Folder): DomainResult<Unit> {
         val trimmedName = folder.name.trim()
-        if (folder.guid.isBlank()) {
+        if (folder.guid.isBlank() || Folder.isGeneral(folder.guid)) {
             return DomainResult.Error(
                 IllegalArgumentException("Folder guid is required"),
                 "Папка не найдена",
+            )
+        }
+        if (trimmedName.equals(GENERAL_NAME, ignoreCase = true)) {
+            return DomainResult.Error(
+                IllegalArgumentException("Reserved folder name"),
+                "Имя «$GENERAL_NAME» зарезервировано",
             )
         }
         if (trimmedName.isBlank()) {

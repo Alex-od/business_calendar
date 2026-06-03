@@ -92,12 +92,12 @@ class WebSocketBridgeClient(
                 return
             }
 
-            if (command.action != ACTION_GET_EVENTS) {
+            if (command.action != ACTION_GET_NOTES) {
                 Log.d("qqwe_tag  WSBridge", "skip unknown action=${command.action}")
                 return
             }
 
-            Log.d("qqwe_tag  WSBridge", "action=get_events requestId=${command.requestId}")
+            Log.d("qqwe_tag  WSBridge", "action=get_notes requestId=${command.requestId}")
             scope.launch {
                 val payload = try {
                     val events = repository.getAllEvents().first()
@@ -168,7 +168,7 @@ class WebSocketBridgeClient(
     }
 
     private companion object {
-        private const val ACTION_GET_EVENTS = "get_events"
+        private const val ACTION_GET_NOTES = "get_notes"
         private const val BASE_BACKOFF_MS = 1_000L
         private const val MAX_BACKOFF_MS = 10_000L
     }

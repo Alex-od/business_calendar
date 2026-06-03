@@ -18,6 +18,7 @@ data class CalendarEventDto(
     @SerialName("is_all_day")                 val isAllDay: Boolean,
     @SerialName("color")                      val color: String,
     @SerialName("notification_minutes_before") val notificationMinutesBefore: Int,
+    @SerialName("alarm_time_millis")           val alarmTimeMillis: Long? = null,
     @SerialName("is_completed")                val isCompleted: Boolean = false,
     @SerialName("folder_guid")                 val folderGuid: String? = null,
 )

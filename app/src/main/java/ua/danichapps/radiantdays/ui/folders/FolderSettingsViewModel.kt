@@ -44,8 +44,9 @@ class FolderSettingsViewModel(
         val name = _uiState.value.folderName
         viewModelScope.launch {
             addFolderUseCase(name)
-                .onSuccess {
+                .onSuccess { folder ->
                     _uiState.update { it.copy(folderName = "", folderNameError = null) }
+                    _events.send(FolderSettingsUiEvent.FolderCreated(folder.guid))
                 }
                 .onError { _, message ->
                     _uiState.update { it.copy(folderNameError = message) }
@@ -82,6 +83,15 @@ class FolderSettingsViewModel(
         }
     }
 
+    fun toggleFolderPinned(folder: Folder) {
+        viewModelScope.launch {
+            updateFolderUseCase(folder.copy(isPinned = !folder.isPinned))
+                .onError { _, message ->
+                    _events.send(FolderSettingsUiEvent.ShowError(message))
+                }
+        }
+    }
+
     private fun observeFolders() {
         viewModelScope.launch {
             getFoldersUseCase()
@@ -92,7 +102,8 @@ class FolderSettingsViewModel(
                     )
                 }
                 .collect { folders ->
-                    _uiState.update { it.copy(isLoading = false, folders = folders) }
+                    val foldersWithGeneral = listOf(Folder.general()) + folders
+                    _uiState.update { it.copy(isLoading = false, folders = foldersWithGeneral) }
                 }
         }
     }

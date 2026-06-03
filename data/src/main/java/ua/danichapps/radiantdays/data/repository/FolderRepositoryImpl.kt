@@ -33,7 +33,7 @@ class FolderRepositoryImpl(
         return count > 0
     }
 
-    override suspend fun addFolder(name: String): DomainResult<Unit> =
+    override suspend fun addFolder(name: String): DomainResult<Folder> =
         runCatching {
             val folder = FolderEntity(
                 guid = UUID.randomUUID().toString(),
@@ -41,8 +41,9 @@ class FolderRepositoryImpl(
             )
             Log.d("qqwe_tag FolderRepositoryImpl, addFolder", "WRITE: folder:$folder")
             dao.insertFolder(folder)
+            folder.toDomain()
         }.fold(
-            onSuccess = { DomainResult.Success(Unit) },
+            onSuccess = { folder -> DomainResult.Success(folder) },
             onFailure = { DomainResult.Error(it) },
         )
 

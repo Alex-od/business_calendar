@@ -1,5 +1,6 @@
 package ua.danichapps.radiantdays.ui.folders
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +15,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.PushPin
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -43,6 +45,9 @@ import ua.danichapps.radiantdays.ui.common.dialog.FolderNameDialog
 @Composable
 fun FolderSettingsScreen(
     onNavigateBack: () -> Unit,
+    onOpenFolder: (String) -> Unit,
+    returnAfterCreate: Boolean = false,
+    onFolderCreated: (String) -> Unit = {},
     viewModel: FolderSettingsViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -51,6 +56,12 @@ fun FolderSettingsScreen(
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
+                is FolderSettingsUiEvent.FolderCreated -> {
+                    if (returnAfterCreate) {
+                        onFolderCreated(event.folderGuid)
+                        onNavigateBack()
+                    }
+                }
                 is FolderSettingsUiEvent.ShowError -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -59,7 +70,7 @@ fun FolderSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Настройка папок") },
+                title = { Text("Папки") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
@@ -75,6 +86,8 @@ fun FolderSettingsScreen(
             onAddFolder = viewModel::addFolder,
             onEditFolder = viewModel::requestEdit,
             onDeleteFolder = viewModel::deleteFolder,
+            onTogglePinned = viewModel::toggleFolderPinned,
+            onOpenFolder = onOpenFolder,
             modifier = Modifier.padding(padding),
         )
     }
@@ -97,6 +110,8 @@ private fun FolderSettingsContent(
     onAddFolder: () -> Unit,
     onEditFolder: (Folder) -> Unit,
     onDeleteFolder: (Folder) -> Unit,
+    onTogglePinned: (Folder) -> Unit,
+    onOpenFolder: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -144,6 +159,8 @@ private fun FolderSettingsContent(
                 ) { folder ->
                     FolderItem(
                         folder = folder,
+                        onOpen = { onOpenFolder(folder.guid) },
+                        onTogglePinned = { onTogglePinned(folder) },
                         onEdit = { onEditFolder(folder) },
                         onDelete = { onDeleteFolder(folder) },
                     )
@@ -156,20 +173,40 @@ private fun FolderSettingsContent(
 @Composable
 private fun FolderItem(
     folder: Folder,
+    onOpen: () -> Unit,
+    onTogglePinned: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
+    val pinColor = if (folder.isPinned) {
+        MaterialTheme.colorScheme.primary
+    } else {
+        MaterialTheme.colorScheme.onSurfaceVariant
+    }
+
     ListItem(
+        modifier = Modifier.clickable(onClick = onOpen),
         headlineContent = { Text(folder.name) },
-        trailingContent = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(onClick = onEdit) {
-                    Icon(Icons.Default.Edit, contentDescription = "Редактировать")
-                }
-                IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Удалить")
+        trailingContent = if (folder.isGeneral) {
+            null
+        } else {
+            {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(onClick = onTogglePinned) {
+                        Icon(
+                            Icons.Default.PushPin,
+                            contentDescription = "Закрепить",
+                            tint = pinColor,
+                        )
+                    }
+                    IconButton(onClick = onEdit) {
+                        Icon(Icons.Default.Edit, contentDescription = "Редактировать")
+                    }
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Default.Delete, contentDescription = "Удалить")
+                    }
                 }
             }
         },

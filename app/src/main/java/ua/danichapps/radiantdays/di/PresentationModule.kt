@@ -2,12 +2,14 @@ package ua.danichapps.radiantdays.di
 
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
+import ua.danichapps.radiantdays.notification.AlarmScheduler
 import ua.danichapps.radiantdays.notification.EventNotificationManager
 import ua.danichapps.radiantdays.sync.DeviceIdProvider
 import ua.danichapps.radiantdays.sync.WebSocketBridgeClient
 import ua.danichapps.radiantdays.ui.addevent.AddEditEventViewModel
 import ua.danichapps.radiantdays.ui.calendar.CalendarViewModel
 import ua.danichapps.radiantdays.ui.folders.FolderSettingsViewModel
+import ua.danichapps.radiantdays.ui.foldernotes.FolderNotesViewModel
 
 /**
  * Koin module for the presentation layer.
@@ -23,6 +25,7 @@ val presentationModule = module {
             getEventsForDayUseCase = get(),
             getEventsForMonthUseCase = get(),
             deleteEventUseCase = get(),
+            alarmScheduler = get(),
         )
     }
 
@@ -32,6 +35,7 @@ val presentationModule = module {
             updateEventUseCase = get(),
             getFoldersUseCase = get(),
             repository = get(),
+            alarmScheduler = get(),
         )
     }
 
@@ -44,8 +48,18 @@ val presentationModule = module {
         )
     }
 
-    // Notification manager (used by Worker via KoinComponent)
+    viewModel { parameters ->
+        FolderNotesViewModel(
+            folderGuid = parameters.get(),
+            getEventsByFolderUseCase = get(),
+            getFoldersUseCase = get(),
+            deleteEventUseCase = get(),
+            alarmScheduler = get(),
+        )
+    }
+
     single { EventNotificationManager(get()) }
+    single { AlarmScheduler(get(), get()) }
 
     // WebSocket bridge (dev-only local sync channel)
     single { DeviceIdProvider(get()) }

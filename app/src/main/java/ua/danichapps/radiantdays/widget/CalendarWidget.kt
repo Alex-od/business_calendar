@@ -19,6 +19,7 @@ import androidx.glance.text.TextStyle
 import org.koin.core.context.GlobalContext
 import ua.danichapps.radiantdays.domain.model.CalendarEvent
 import ua.danichapps.radiantdays.domain.model.DomainResult
+import ua.danichapps.radiantdays.domain.model.ReminderPolicy
 import ua.danichapps.radiantdays.domain.usecase.GetUpcomingEventsUseCase
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -66,7 +67,7 @@ private fun WidgetContent(events: List<CalendarEvent>) {
             .padding(12.dp),
     ) {
         Text(
-            text  = "Today's Events",
+            text  = "Напоминания",
             style = TextStyle(
                 color      = GlanceTheme.colors.primary,
                 fontWeight = FontWeight.Bold,
@@ -76,7 +77,7 @@ private fun WidgetContent(events: List<CalendarEvent>) {
 
         if (events.isEmpty()) {
             Text(
-                text  = "No upcoming events",
+                text  = "Нет предстоящих",
                 style = TextStyle(
                     color    = GlanceTheme.colors.onBackground,
                     fontSize = 12.sp,
@@ -84,8 +85,8 @@ private fun WidgetContent(events: List<CalendarEvent>) {
             )
         } else {
             events.take(3).forEach { event ->
-                val timeLabel = if (event.isAllDay) "All day"
-                                else timeFormat.format(Date(event.startTimeMillis))
+                val fireMillis = ReminderPolicy.reminderFireTimeMillis(event) ?: event.alarmTimeMillis ?: return@forEach
+                val timeLabel = timeFormat.format(Date(fireMillis))
                 Text(
                     text  = "вЂў $timeLabel  ${event.description}",
                     style = TextStyle(

@@ -40,6 +40,9 @@ internal object BridgeJsonCodec {
                         put("is_all_day", JsonPrimitive(event.isAllDay))
                         put("color", JsonPrimitive(event.color.name))
                         put("notification_minutes_before", JsonPrimitive(event.notificationMinutesBefore))
+                        event.alarmTimeMillis?.let { alarmTimeMillis ->
+                            put("alarm_time_millis", JsonPrimitive(alarmTimeMillis))
+                        }
                         put("is_completed", JsonPrimitive(event.isCompleted))
                     }
                 )

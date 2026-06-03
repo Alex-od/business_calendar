@@ -10,12 +10,12 @@ import ua.danichapps.radiantdays.data.local.entity.NoteEntity
 /**
  * Single Room database for the application.
  *
- * To add a migration, increment [version] and provide a [androidx.room.migration.Migration]
- * object in the [androidx.room.Room.databaseBuilder] call inside [DataModule].
+ * To add a migration, increment [version], add a [Migration] in [CalendarDatabaseMigrations],
+ * and export the schema JSON via KSP.
  */
 @Database(
     entities  = [NoteEntity::class, FolderEntity::class],
-    version   = 5,
+    version   = 7,
     exportSchema = true,
 )
 abstract class CalendarDatabase : RoomDatabase() {

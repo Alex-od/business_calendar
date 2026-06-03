@@ -1,6 +1,6 @@
 ﻿# WS Bridge Server Sequence
 
-## Основной сценарий: успешный запрос `GET /get-events/{device_id}`
+## Основной сценарий: успешный запрос `GET /get-notes/{device_id}`
 
 ```mermaid
 sequenceDiagram
@@ -9,13 +9,13 @@ sequenceDiagram
     participant S as WS Bridge Server
     participant D as Device (WebSocket)
 
-    C->>S: GET /get-events/{device_id}
+    C->>S: GET /get-notes/{device_id}
     S->>S: Проверка connections[device_id]
 
     alt Device connected
         S->>S: request_id = UUID
         S->>S: pending[request_id] = Future
-        S->>D: {"action":"get_events","request_id":"..."}
+        S->>D: {"action":"get_notes","request_id":"..."}
         D-->>S: {"request_id":"...","result":...}
         S->>S: future.set_result(result)
         S-->>C: 200 {"request_id":"...","result":...}
@@ -34,8 +34,8 @@ sequenceDiagram
     participant S as WS Bridge Server
     participant D as Device (WebSocket)
 
-    C->>S: GET /get-events/{device_id}
-    S->>D: send get_events(request_id)
+    C->>S: GET /get-notes/{device_id}
+    S->>D: send get_notes(request_id)
 
     alt Timeout (10s)
         S->>S: wait_for(Future, 10s) -> TimeoutError
@@ -55,6 +55,7 @@ sequenceDiagram
 
 ## Примечания для команды
 - Корреляция запрос-ответ выполняется строго по `request_id`.
+- `GET /get-events/{device_id}` временно сохранен как legacy alias.
 - Для потокобезопасности используются два lock:
   - `connections_lock` для глобального реестра устройств.
   - `pending_lock` для in-flight запросов конкретного устройства.

@@ -9,7 +9,7 @@ interface FolderRepository {
 
     suspend fun isFolderNameTaken(name: String, excludeGuid: String? = null): Boolean
 
-    suspend fun addFolder(name: String): DomainResult<Unit>
+    suspend fun addFolder(name: String): DomainResult<Folder>
 
     suspend fun updateFolder(folder: Folder): DomainResult<Unit>
 
