@@ -4,6 +4,7 @@ import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -11,12 +12,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AlarmAdd
 import androidx.compose.material.icons.filled.AlarmOff
 import androidx.compose.material.icons.filled.Alarm
@@ -26,17 +33,14 @@ import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.TextField
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -53,12 +57,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.TextLayoutResult
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
-import ua.danichapps.radiantdays.domain.model.Folder
+import ua.danichapps.radiantdays.domain.model.Tag
+import ua.danichapps.radiantdays.ui.common.ColoredTagChip
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -78,9 +88,9 @@ fun AddEditEventScreen(
     initialDayMillis: Long,
     editingEventId: Long?,
     onNavigateBack: () -> Unit,
-    onOpenFolders: () -> Unit,
-    createdFolderGuid: String? = null,
-    onCreatedFolderGuidConsumed: () -> Unit = {},
+    onOpenTags: () -> Unit,
+    createdTagGuid: String? = null,
+    onCreatedTagGuidConsumed: () -> Unit = {},
     viewModel: AddEditEventViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -100,10 +110,10 @@ fun AddEditEventScreen(
         }
     }
 
-    LaunchedEffect(createdFolderGuid) {
-        val folderGuid = createdFolderGuid ?: return@LaunchedEffect
-        viewModel.onFolderSelected(folderGuid)
-        onCreatedFolderGuidConsumed()
+    LaunchedEffect(createdTagGuid) {
+        val tagGuid = createdTagGuid ?: return@LaunchedEffect
+        viewModel.onTagAddedFromSettings(tagGuid)
+        onCreatedTagGuidConsumed()
     }
 
     val context = LocalContext.current
@@ -130,7 +140,17 @@ fun AddEditEventScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (editingEventId != null) "Редактировать заметку" else "Новая заметка") },
+                title = {
+                    TextField(
+                        value = uiState.title,
+                        onValueChange = viewModel::onTitleChange,
+                        placeholder = { Text("Заголовок") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = borderlessTextFieldColors(),
+                        isError = uiState.titleError != null,
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
@@ -171,15 +191,26 @@ fun AddEditEventScreen(
             onAlarmTimeChange = viewModel::onAlarmTimeChange,
             onNotificationMinutesChange = viewModel::onNotificationMinutesChange,
             onIsCompletedChange = viewModel::onIsCompletedChange,
-            startTimeMillis = uiState.startTimeMillis,
-            onFolderSelected = viewModel::onFolderSelected,
-            onOpenFolders = onOpenFolders,
+            onTagToggle = viewModel::onTagToggle,
+            onTagsExpandedToggle = viewModel::onTagsExpandedToggle,
+            onOpenTags = onOpenTags,
             modifier = Modifier.padding(padding),
         )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun borderlessTextFieldColors() = TextFieldDefaults.colors(
+    focusedIndicatorColor = Color.Transparent,
+    unfocusedIndicatorColor = Color.Transparent,
+    disabledIndicatorColor = Color.Transparent,
+    errorIndicatorColor = Color.Transparent,
+    focusedContainerColor = Color.Transparent,
+    unfocusedContainerColor = Color.Transparent,
+    disabledContainerColor = Color.Transparent,
+)
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 private fun EventForm(
     uiState: AddEditEventUiState,
@@ -187,28 +218,54 @@ private fun EventForm(
     onAlarmTimeChange: (Long) -> Unit,
     onNotificationMinutesChange: (Int) -> Unit,
     onIsCompletedChange: (Boolean) -> Unit,
-    onFolderSelected: (String?) -> Unit,
-    onOpenFolders: () -> Unit,
-    startTimeMillis: Long,
+    onTagToggle: (String) -> Unit,
+    onTagsExpandedToggle: () -> Unit,
+    onOpenTags: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-    val pinnedFolders = uiState.folders.filter { it.isPinned }
+    val bodyScrollState = rememberScrollState()
+    val bodyTextStyle = MaterialTheme.typography.bodyLarge
+    val bodyColor = MaterialTheme.colorScheme.onSurface
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
 
     var showAlarmDatePicker by remember { mutableStateOf(false) }
     var showAlarmTimePicker by remember { mutableStateOf(false) }
 
+    var descriptionValue by remember { mutableStateOf(TextFieldValue(uiState.description)) }
+    var textLayoutResult: TextLayoutResult? by remember { mutableStateOf(null) }
+
+    // Sync text when description changes externally (e.g. after loadEvent).
+    LaunchedEffect(uiState.description) {
+        if (uiState.description != descriptionValue.text) {
+            descriptionValue = TextFieldValue(
+                text = uiState.description,
+                selection = TextRange(uiState.description.length),
+            )
+        }
+    }
+
+    // Bring cursor rect into view whenever cursor position changes.
+    LaunchedEffect(descriptionValue.selection) {
+        val layout = textLayoutResult ?: return@LaunchedEffect
+        if (descriptionValue.text.isEmpty()) return@LaunchedEffect
+        val cursorOffset = descriptionValue.selection.start.coerceIn(0, descriptionValue.text.length)
+        bringIntoViewRequester.bringIntoView(layout.getCursorRect(cursorOffset))
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
+            .imePadding()
+            .verticalScroll(bodyScrollState)
             .padding(16.dp),
     ) {
         uiState.alarmTimeMillis?.let { alarmTimeMillis ->
             ReminderSection(
                 alarmTimeMillis = alarmTimeMillis,
                 notificationMinutesBefore = uiState.notificationMinutesBefore,
-                startTimeMillis = startTimeMillis,
+                startTimeMillis = uiState.startTimeMillis,
                 isCompleted = uiState.isCompleted,
                 dateFormat = dateFormat,
                 timeFormat = timeFormat,
@@ -222,38 +279,40 @@ private fun EventForm(
             Spacer(Modifier.height(12.dp))
         }
 
-        if (pinnedFolders.isNotEmpty()) {
-            PinnedFolderRow(
-                folders = pinnedFolders,
-                selectedFolderGuid = uiState.selectedFolderGuid,
-                onFolderSelected = onFolderSelected,
-            )
-
-            Spacer(Modifier.height(12.dp))
-        }
-
-        FolderSelector(
-            folders = uiState.folders,
-            selectedFolderGuid = uiState.selectedFolderGuid,
-            onFolderSelected = onFolderSelected,
-            onOpenFolders = onOpenFolders,
+        TagQuickAccessSection(
+            tags = uiState.tags,
+            selectedTagGuids = uiState.selectedTagGuids,
+            tagsExpanded = uiState.tagsExpanded,
+            onTagToggle = onTagToggle,
+            onTagsExpandedToggle = onTagsExpandedToggle,
+            onOpenTags = onOpenTags,
         )
 
         Spacer(Modifier.height(12.dp))
 
-        OutlinedTextField(
-            value = uiState.description,
-            onValueChange = onDescriptionChange,
-            label = { Text("Заметка *") },
+        BasicTextField(
+            value = descriptionValue,
+            onValueChange = { newValue ->
+                descriptionValue = newValue
+                onDescriptionChange(newValue.text)
+            },
+            onTextLayout = { textLayoutResult = it },
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f),
-            isError = uiState.descriptionError != null,
-            supportingText = uiState.descriptionError?.let { msg ->
-                { Text(msg, color = MaterialTheme.colorScheme.error) }
-            },
-            minLines = 12,
+                .defaultMinSize(minHeight = 200.dp)
+                .bringIntoViewRequester(bringIntoViewRequester),
+            textStyle = bodyTextStyle.copy(color = bodyColor),
+            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
         )
+
+        if (uiState.descriptionError != null) {
+            Text(
+                text = uiState.descriptionError,
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
     }
 
     val alarmTimeMillis = uiState.alarmTimeMillis
@@ -310,7 +369,6 @@ private fun ReminderSection(
     onIsCompletedChange: (Boolean) -> Unit,
 ) {
     val fireMillis = reminderFireTimeMillis(alarmTimeMillis, notificationMinutesBefore)
-    val now = System.currentTimeMillis()
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -337,14 +395,14 @@ private fun ReminderSection(
             item {
                 FilterChip(
                     selected = false,
-                    onClick = { onPresetAlarm(millisPlusMinutes(now, 15)) },
+                    onClick = { onPresetAlarm(millisPlusMinutes(System.currentTimeMillis(), 15)) },
                     label = { Text("+15 мин") },
                 )
             }
             item {
                 FilterChip(
                     selected = false,
-                    onClick = { onPresetAlarm(millisPlusHours(now, 1)) },
+                    onClick = { onPresetAlarm(millisPlusHours(System.currentTimeMillis(), 1)) },
                     label = { Text("+1 ч") },
                 )
             }
@@ -386,87 +444,76 @@ private fun ReminderSection(
 }
 
 @Composable
-private fun PinnedFolderRow(
-    folders: List<Folder>,
-    selectedFolderGuid: String?,
-    onFolderSelected: (String?) -> Unit,
+private fun TagQuickAccessSection(
+    tags: List<Tag>,
+    selectedTagGuids: Set<String>,
+    tagsExpanded: Boolean,
+    onTagToggle: (String) -> Unit,
+    onTagsExpandedToggle: () -> Unit,
+    onOpenTags: () -> Unit,
 ) {
-    LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        items(
-            items = folders,
-            key = { folder -> folder.guid },
-        ) { folder ->
-            FilterChip(
-                selected = folder.guid == selectedFolderGuid,
-                onClick = { onFolderSelected(folder.guid) },
-                label = { Text(folder.name) },
-            )
-        }
-    }
-}
+    val selectedTags = tags.filter { it.guid in selectedTagGuids }
+    val pinnedUnselectedTags = tags.filter { it.isPinned && it.guid !in selectedTagGuids }
+    val otherUnselectedTags = tags.filter { !it.isPinned && it.guid !in selectedTagGuids }
+    val hasMoreTags = otherUnselectedTags.isNotEmpty()
 
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FolderSelector(
-    folders: List<Folder>,
-    selectedFolderGuid: String?,
-    onFolderSelected: (String?) -> Unit,
-    onOpenFolders: () -> Unit,
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val selectedName = folders.firstOrNull { it.guid == selectedFolderGuid }?.name ?: "Без папки"
-
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = it },
-            modifier = Modifier.weight(1f),
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text("Теги", style = MaterialTheme.typography.labelMedium)
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
         ) {
-            OutlinedTextField(
-                value = selectedName,
-                onValueChange = {},
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true),
-                readOnly = true,
-                label = { Text("Папка") },
-                singleLine = true,
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                },
-            )
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = { expanded = false },
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Без папки") },
-                    onClick = {
-                        onFolderSelected(null)
-                        expanded = false
-                    },
+            items(
+                items = selectedTags,
+                key = { tag -> "selected_${tag.guid}" },
+            ) { tag ->
+                ColoredTagChip(
+                    name = tag.name,
+                    color = tag.color,
+                    selected = true,
+                    onClick = { onTagToggle(tag.guid) },
                 )
-                folders.forEach { folder ->
-                    DropdownMenuItem(
-                        text = { Text(folder.name) },
-                        onClick = {
-                            onFolderSelected(folder.guid)
-                            expanded = false
-                        },
+            }
+            items(
+                items = pinnedUnselectedTags,
+                key = { tag -> tag.guid },
+            ) { tag ->
+                ColoredTagChip(
+                    name = tag.name,
+                    color = tag.color,
+                    selected = tag.guid in selectedTagGuids,
+                    onClick = { onTagToggle(tag.guid) },
+                )
+            }
+            if (hasMoreTags) {
+                item(key = "more") {
+                    FilterChip(
+                        selected = tagsExpanded,
+                        onClick = onTagsExpandedToggle,
+                        label = { Text("Ещё") },
                     )
                 }
             }
-        }
-
-        IconButton(onClick = onOpenFolders) {
-            Icon(Icons.Default.Add, contentDescription = "Добавить папку")
+            if (tagsExpanded) {
+                items(
+                    items = otherUnselectedTags,
+                    key = { tag -> tag.guid },
+                ) { tag ->
+                    ColoredTagChip(
+                        name = tag.name,
+                        color = tag.color,
+                        selected = tag.guid in selectedTagGuids,
+                        onClick = { onTagToggle(tag.guid) },
+                    )
+                }
+            }
+            item(key = "add_tag") {
+                FilterChip(
+                    selected = false,
+                    onClick = onOpenTags,
+                    label = { Text("+") },
+                )
+            }
         }
     }
 }
@@ -489,3 +536,4 @@ private fun mergeTimeIntoMillis(originalMillis: Long, hour: Int, minute: Int): L
         set(Calendar.SECOND, 0)
         set(Calendar.MILLISECOND, 0)
     }.timeInMillis
+
