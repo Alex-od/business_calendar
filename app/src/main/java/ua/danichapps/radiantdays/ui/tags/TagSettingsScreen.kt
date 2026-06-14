@@ -1,13 +1,10 @@
-package ua.danichapps.radiantdays.ui.folders
+package ua.danichapps.radiantdays.ui.tags
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,7 +20,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -32,37 +28,43 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
-import ua.danichapps.radiantdays.domain.model.Folder
-import ua.danichapps.radiantdays.ui.common.dialog.FolderNameDialog
+import ua.danichapps.radiantdays.domain.model.EventColor
+import ua.danichapps.radiantdays.domain.model.Tag
+import ua.danichapps.radiantdays.ui.common.TagColorDot
+import ua.danichapps.radiantdays.ui.common.dialog.TagEditDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FolderSettingsScreen(
+fun TagSettingsScreen(
     onNavigateBack: () -> Unit,
-    onOpenFolder: (String) -> Unit,
+    onOpenTag: (String) -> Unit,
     returnAfterCreate: Boolean = false,
-    onFolderCreated: (String) -> Unit = {},
-    viewModel: FolderSettingsViewModel = koinViewModel(),
+    onTagCreated: (String) -> Unit = {},
+    viewModel: TagSettingsViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showAddDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is FolderSettingsUiEvent.FolderCreated -> {
+                is TagSettingsUiEvent.TagCreated -> {
+                    showAddDialog = false
                     if (returnAfterCreate) {
-                        onFolderCreated(event.folderGuid)
+                        onTagCreated(event.tagGuid)
                         onNavigateBack()
                     }
                 }
-                is FolderSettingsUiEvent.ShowError -> snackbarHostState.showSnackbar(event.message)
+                is TagSettingsUiEvent.ShowError -> snackbarHostState.showSnackbar(event.message)
             }
         }
     }
@@ -70,7 +72,7 @@ fun FolderSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Папки") },
+                title = { Text("Теги") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
@@ -78,107 +80,107 @@ fun FolderSettingsScreen(
                 },
             )
         },
+        bottomBar = {
+            Button(
+                onClick = {
+                    viewModel.clearAddTagError()
+                    showAddDialog = true
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+            ) {
+                Text("Добавить тег")
+            }
+        },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
-        FolderSettingsContent(
+        TagSettingsContent(
             uiState = uiState,
-            onFolderNameChange = viewModel::onFolderNameChange,
-            onAddFolder = viewModel::addFolder,
-            onEditFolder = viewModel::requestEdit,
-            onDeleteFolder = viewModel::deleteFolder,
-            onTogglePinned = viewModel::toggleFolderPinned,
-            onOpenFolder = onOpenFolder,
+            onEditTag = viewModel::requestEdit,
+            onDeleteTag = viewModel::deleteTag,
+            onTogglePinned = viewModel::toggleTagPinned,
+            onOpenTag = onOpenTag,
             modifier = Modifier.padding(padding),
         )
     }
 
-    uiState.editingFolder?.let { folder ->
-        FolderNameDialog(
-            title = "Редактировать папку",
-            initialName = folder.name,
+    if (showAddDialog) {
+        TagEditDialog(
+            title = "Добавить тег",
+            initialName = "",
+            initialColor = EventColor.DEFAULT,
+            confirmText = "Добавить",
+            externalError = uiState.tagNameError,
+            onConfirm = viewModel::addTag,
+            onInputChange = viewModel::clearAddTagError,
+            onDismiss = {
+                showAddDialog = false
+                viewModel.clearAddTagError()
+            },
+        )
+    }
+
+    uiState.editingTag?.let { tag ->
+        TagEditDialog(
+            title = "Редактировать тег",
+            initialName = tag.name,
+            initialColor = tag.color,
             confirmText = "Сохранить",
-            onConfirm = viewModel::updateFolder,
+            onConfirm = viewModel::updateTag,
             onDismiss = viewModel::dismissEdit,
         )
     }
 }
 
 @Composable
-private fun FolderSettingsContent(
-    uiState: FolderSettingsUiState,
-    onFolderNameChange: (String) -> Unit,
-    onAddFolder: () -> Unit,
-    onEditFolder: (Folder) -> Unit,
-    onDeleteFolder: (Folder) -> Unit,
-    onTogglePinned: (Folder) -> Unit,
-    onOpenFolder: (String) -> Unit,
+private fun TagSettingsContent(
+    uiState: TagSettingsUiState,
+    onEditTag: (Tag) -> Unit,
+    onDeleteTag: (Tag) -> Unit,
+    onTogglePinned: (Tag) -> Unit,
+    onOpenTag: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(16.dp),
-    ) {
-        OutlinedTextField(
-            value = uiState.folderName,
-            onValueChange = onFolderNameChange,
-            label = { Text("Введите имя папки") },
-            modifier = Modifier.fillMaxWidth(),
-            isError = uiState.folderNameError != null,
-            supportingText = uiState.folderNameError?.let { message ->
-                { Text(message, color = MaterialTheme.colorScheme.error) }
-            },
-            singleLine = true,
-        )
-
-        Spacer(Modifier.height(12.dp))
-
-        Button(
-            onClick = onAddFolder,
-            modifier = Modifier.fillMaxWidth(),
+    if (uiState.isLoading) {
+        Row(
+            modifier = modifier.fillMaxSize(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Добавить")
+            CircularProgressIndicator()
         }
-
-        Spacer(Modifier.height(16.dp))
-
-        if (uiState.isLoading) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                CircularProgressIndicator()
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-            ) {
-                items(
-                    items = uiState.folders,
-                    key = { folder -> folder.guid },
-                ) { folder ->
-                    FolderItem(
-                        folder = folder,
-                        onOpen = { onOpenFolder(folder.guid) },
-                        onTogglePinned = { onTogglePinned(folder) },
-                        onEdit = { onEditFolder(folder) },
-                        onDelete = { onDeleteFolder(folder) },
-                    )
-                }
+    } else {
+        LazyColumn(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp),
+        ) {
+            items(
+                items = uiState.tags,
+                key = { tag -> tag.guid },
+            ) { tag ->
+                TagItem(
+                    tag = tag,
+                    onOpen = { onOpenTag(tag.guid) },
+                    onTogglePinned = { onTogglePinned(tag) },
+                    onEdit = { onEditTag(tag) },
+                    onDelete = { onDeleteTag(tag) },
+                )
             }
         }
     }
 }
 
 @Composable
-private fun FolderItem(
-    folder: Folder,
+private fun TagItem(
+    tag: Tag,
     onOpen: () -> Unit,
     onTogglePinned: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val pinColor = if (folder.isPinned) {
+    val pinColor = if (tag.isPinned) {
         MaterialTheme.colorScheme.primary
     } else {
         MaterialTheme.colorScheme.onSurfaceVariant
@@ -186,8 +188,13 @@ private fun FolderItem(
 
     ListItem(
         modifier = Modifier.clickable(onClick = onOpen),
-        headlineContent = { Text(folder.name) },
-        trailingContent = if (folder.isGeneral) {
+        leadingContent = if (tag.isUntaggedFilter) {
+            null
+        } else {
+            { TagColorDot(color = tag.color) }
+        },
+        headlineContent = { Text(tag.name) },
+        trailingContent = if (tag.isUntaggedFilter) {
             null
         } else {
             {

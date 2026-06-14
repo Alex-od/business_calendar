@@ -12,29 +12,33 @@ import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import ua.danichapps.radiantdays.data.local.dao.CalendarEventDao
+import ua.danichapps.radiantdays.data.local.dao.NoteTagDao
 import ua.danichapps.radiantdays.data.local.entity.NoteEntity
+import ua.danichapps.radiantdays.data.local.entity.NoteWithTags
 import ua.danichapps.radiantdays.domain.model.DomainResult
 
 class CalendarEventRepositoryImplTest {
 
     private lateinit var dao: CalendarEventDao
+    private lateinit var noteTagDao: NoteTagDao
     private lateinit var repository: CalendarEventRepositoryImpl
 
     @Before
     fun setUp() {
-        dao        = mockk()
-        repository = CalendarEventRepositoryImpl(dao)
+        dao         = mockk(relaxed = true)
+        noteTagDao  = mockk(relaxed = true)
+        repository  = CalendarEventRepositoryImpl(dao, noteTagDao)
     }
 
     @Test
     fun `getEventsForDay maps entities to domain models`() = runTest {
-        val entity = sampleEntity()
+        val entity = sampleNoteWithTags()
         every { dao.getEventsForDay(any(), any()) } returns flowOf(listOf(entity))
 
         val result = repository.getEventsForDay(0L, 86_400_000L).toList()
 
         assertEquals(1, result.first().size)
-        assertEquals(entity.description, result.first().first().description)
+        assertEquals(entity.note.description, result.first().first().description)
     }
 
     @Test
@@ -80,6 +84,11 @@ class CalendarEventRepositoryImplTest {
 
     // в”Ђв”Ђ Helpers в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
+    private fun sampleNoteWithTags() = NoteWithTags(
+        note = sampleEntity(),
+        tags = emptyList(),
+    )
+
     private fun sampleEntity() = NoteEntity(
         id                       = 1L,
         description              = "Demo event",
@@ -88,5 +97,7 @@ class CalendarEventRepositoryImplTest {
         isAllDay                 = false,
         color                    = "DEFAULT",
         notificationMinutesBefore = 30,
+        createdAtMillis          = 1_000L,
+        updatedAtMillis          = 1_000L,
     )
 }

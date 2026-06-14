@@ -4,23 +4,16 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
 import ua.danichapps.radiantdays.data.local.entity.NoteEntity
+import ua.danichapps.radiantdays.data.local.entity.NoteWithTags
 
-/**
- * Room DAO for calendar event CRUD operations.
- *
- * Reactive queries return [Flow] so the UI layer automatically receives updates
- * without explicit refresh calls.
- */
 @Dao
 interface CalendarEventDao {
 
-    /**
-     * Returns a live [Flow] of events whose [NoteEntity.startTimeMillis]
-     * falls within [[dayStart], [dayEnd]).
-     */
+    @Transaction
     @Query(
         """
         SELECT * FROM notes
@@ -28,52 +21,45 @@ interface CalendarEventDao {
         ORDER BY start_time_millis ASC
         """
     )
-    fun getEventsForDay(dayStart: Long, dayEnd: Long): Flow<List<NoteEntity>>
+    fun getEventsForDay(dayStart: Long, dayEnd: Long): Flow<List<NoteWithTags>>
 
-    /** Returns a live [Flow] of all events, ordered by start time. */
+    @Transaction
     @Query("SELECT * FROM notes ORDER BY start_time_millis ASC")
-    fun getAllEvents(): Flow<List<NoteEntity>>
+    fun getAllEvents(): Flow<List<NoteWithTags>>
 
+    @Transaction
     @Query(
         """
-        SELECT * FROM notes
-        WHERE folder_guid IS NULL
-        ORDER BY start_time_millis ASC
+        SELECT * FROM notes n
+        WHERE NOT EXISTS (SELECT 1 FROM note_tags nt WHERE nt.note_id = n.id)
+        ORDER BY n.updated_at_millis DESC
         """
     )
-    fun getEventsInGeneralFolder(): Flow<List<NoteEntity>>
+    fun getEventsWithoutTags(): Flow<List<NoteWithTags>>
 
+    @Transaction
     @Query(
         """
-        SELECT * FROM notes
-        WHERE folder_guid = :folderGuid
-        ORDER BY start_time_millis ASC
+        SELECT n.* FROM notes n
+        INNER JOIN note_tags nt ON n.id = nt.note_id AND nt.tag_guid = :tagGuid
+        ORDER BY n.updated_at_millis DESC
         """
     )
-    fun getEventsByFolder(folderGuid: String): Flow<List<NoteEntity>>
+    fun getEventsByTag(tagGuid: String): Flow<List<NoteWithTags>>
 
-    /** Returns a single event by its [id], or `null` if not found. */
+    @Transaction
     @Query("SELECT * FROM notes WHERE id = :id LIMIT 1")
-    suspend fun getEventById(id: Long): NoteEntity?
+    suspend fun getEventById(id: Long): NoteWithTags?
 
-    /**
-     * Inserts a new event and returns its auto-generated row ID.
-     * [OnConflictStrategy.ABORT] ensures duplicate IDs are rejected.
-     */
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertEvent(event: NoteEntity): Long
 
-    /** Updates an existing event row. Returns the number of rows affected. */
     @Update
     suspend fun updateEvent(event: NoteEntity): Int
 
-    /** Deletes the event with the given [id]. Returns the number of rows deleted. */
     @Query("DELETE FROM notes WHERE id = :id")
     suspend fun deleteEventById(id: Long): Int
 
-    /**
-     * Reminder fire time = alarm_time_millis - notification_minutes_before * 60000.
-     */
     @Query(
         """
         SELECT * FROM notes

@@ -27,11 +27,11 @@ interface CalendarEventRepository {
     /** Returns a cold [Flow] of all events, ordered by start time ascending. */
     fun getAllEvents(): Flow<List<CalendarEvent>>
 
-    /** Notes without a folder (virtual «Общее» folder). */
-    fun getEventsInGeneralFolder(): Flow<List<CalendarEvent>>
+    /** Notes that have no tags assigned. */
+    fun getEventsWithoutTags(): Flow<List<CalendarEvent>>
 
-    /** Notes assigned to the folder identified by [folderGuid]. */
-    fun getEventsByFolderGuid(folderGuid: String): Flow<List<CalendarEvent>>
+    /** Notes that include the tag identified by [tagGuid]. */
+    fun getEventsByTagGuid(tagGuid: String): Flow<List<CalendarEvent>>
 
     /** Fetches a single event by its [id], or `null` if not found. */
     suspend fun getEventById(id: Long): CalendarEvent?

@@ -8,7 +8,7 @@ import ua.danichapps.radiantdays.domain.repository.CalendarEventRepository
  * Validates and persists a new [CalendarEvent].
  *
  * Business rules enforced here:
- * - Description must not be blank.
+ * - Title or description must not be blank.
  * - End time must be в‰Ґ start time.
  *
  * The ViewModel remains logic-free; it only passes user input to this use-case
@@ -23,8 +23,8 @@ class AddEventUseCase(private val repository: CalendarEventRepository) {
      * @return [DomainResult.Success] with the new row ID, or [DomainResult.Error].
      */
     suspend operator fun invoke(event: CalendarEvent): DomainResult<Long> {
-        if (event.description.isBlank()) {
-            return DomainResult.Error(IllegalArgumentException("Description must not be blank"))
+        if (event.title.isBlank() && event.description.isBlank()) {
+            return DomainResult.Error(IllegalArgumentException("Title or note text must not be blank"))
         }
         if (event.endTimeMillis < event.startTimeMillis) {
             return DomainResult.Error(IllegalArgumentException("End time must not be before start time"))

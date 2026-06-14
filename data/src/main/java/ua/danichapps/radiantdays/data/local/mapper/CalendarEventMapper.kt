@@ -1,71 +1,77 @@
 package ua.danichapps.radiantdays.data.local.mapper
 
 import ua.danichapps.radiantdays.data.local.entity.NoteEntity
+import ua.danichapps.radiantdays.data.local.entity.NoteWithTags
 import ua.danichapps.radiantdays.data.remote.dto.CalendarEventDto
 import ua.danichapps.radiantdays.domain.model.CalendarEvent
 import ua.danichapps.radiantdays.domain.model.EventColor
 
-// в”Ђв”Ђ Entity в†” Domain в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
-
-/** Converts a Room entity to a domain model. */
-fun NoteEntity.toDomain(): CalendarEvent = CalendarEvent(
-    id                        = id,
-    description               = description,
-    startTimeMillis           = startTimeMillis,
-    endTimeMillis             = endTimeMillis,
-    isAllDay                  = isAllDay,
-    color                     = color.toEventColor(),
-    notificationMinutesBefore = notificationMinutesBefore,
-    alarmTimeMillis           = alarmTimeMillis,
-    isCompleted               = isCompleted,
-    folderGuid                = folderGuid,
+fun NoteWithTags.toDomain(): CalendarEvent = note.toDomain(
+    tagGuids = tags.map { it.guid }.toSet(),
 )
 
-/** Converts a domain model to a Room entity ready for persistence. */
+fun NoteEntity.toDomain(tagGuids: Set<String> = emptySet()): CalendarEvent = CalendarEvent(
+    id = id,
+    title = title,
+    description = description,
+    startTimeMillis = startTimeMillis,
+    endTimeMillis = endTimeMillis,
+    isAllDay = isAllDay,
+    color = color.toEventColor(),
+    notificationMinutesBefore = notificationMinutesBefore,
+    alarmTimeMillis = alarmTimeMillis,
+    isCompleted = isCompleted,
+    tagGuids = tagGuids,
+    createdAtMillis = createdAtMillis,
+    updatedAtMillis = updatedAtMillis,
+)
+
 fun CalendarEvent.toEntity(): NoteEntity = NoteEntity(
-    id                        = id,
-    description               = description,
-    startTimeMillis           = startTimeMillis,
-    endTimeMillis             = endTimeMillis,
-    isAllDay                  = isAllDay,
-    color                     = color.name,
+    id = id,
+    title = title,
+    description = description,
+    startTimeMillis = startTimeMillis,
+    endTimeMillis = endTimeMillis,
+    isAllDay = isAllDay,
+    color = color.name,
     notificationMinutesBefore = notificationMinutesBefore,
-    alarmTimeMillis           = alarmTimeMillis,
-    isCompleted               = isCompleted,
-    folderGuid                = folderGuid,
+    alarmTimeMillis = alarmTimeMillis,
+    isCompleted = isCompleted,
+    createdAtMillis = createdAtMillis,
+    updatedAtMillis = updatedAtMillis,
 )
 
-// в”Ђв”Ђ DTO в†” Domain в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
-
-/** Converts a network DTO to a domain model. */
 fun CalendarEventDto.toDomain(): CalendarEvent = CalendarEvent(
-    id                        = id,
-    description               = description,
-    startTimeMillis           = startTimeMillis,
-    endTimeMillis             = endTimeMillis,
-    isAllDay                  = isAllDay,
-    color                     = color.toEventColor(),
+    id = id,
+    title = title,
+    description = description,
+    startTimeMillis = startTimeMillis,
+    endTimeMillis = endTimeMillis,
+    isAllDay = isAllDay,
+    color = color.toEventColor(),
     notificationMinutesBefore = notificationMinutesBefore,
-    alarmTimeMillis           = alarmTimeMillis,
-    isCompleted               = isCompleted,
-    folderGuid                = folderGuid,
+    alarmTimeMillis = alarmTimeMillis,
+    isCompleted = isCompleted,
+    tagGuids = tagGuids.toSet(),
+    createdAtMillis = createdAtMillis,
+    updatedAtMillis = updatedAtMillis,
 )
 
-/** Converts a domain model to a network DTO for API calls. */
 fun CalendarEvent.toDto(): CalendarEventDto = CalendarEventDto(
-    id                        = id,
-    description               = description,
-    startTimeMillis           = startTimeMillis,
-    endTimeMillis             = endTimeMillis,
-    isAllDay                  = isAllDay,
-    color                     = color.name,
+    id = id,
+    title = title,
+    description = description,
+    startTimeMillis = startTimeMillis,
+    endTimeMillis = endTimeMillis,
+    isAllDay = isAllDay,
+    color = color.name,
     notificationMinutesBefore = notificationMinutesBefore,
-    alarmTimeMillis           = alarmTimeMillis,
-    isCompleted               = isCompleted,
-    folderGuid                = folderGuid,
+    alarmTimeMillis = alarmTimeMillis,
+    isCompleted = isCompleted,
+    tagGuids = tagGuids.toList(),
+    createdAtMillis = createdAtMillis,
+    updatedAtMillis = updatedAtMillis,
 )
-
-// в”Ђв”Ђ Helpers в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
 
 private fun String.toEventColor(): EventColor =
     runCatching { EventColor.valueOf(this) }.getOrDefault(EventColor.DEFAULT)

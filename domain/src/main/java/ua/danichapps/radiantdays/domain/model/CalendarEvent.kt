@@ -7,7 +7,8 @@ package ua.danichapps.radiantdays.domain.model
  * and compatible with future Kotlin Multiplatform migration.
  *
  * @property id           Unique identifier. `0` means the entity has not been persisted yet.
- * @property description  Main note text.
+ * @property title        Short note title shown in the toolbar and lists.
+ * @property description  Main note body text.
  * @property startTimeMillis Start of the event in epoch milliseconds (UTC).
  * @property endTimeMillis   End of the event in epoch milliseconds (UTC).
  * @property isAllDay     Whether the event occupies the whole day (time part is ignored).
@@ -15,10 +16,13 @@ package ua.danichapps.radiantdays.domain.model
  * @property alarmTimeMillis Optional reminder anchor time. `null` means the note has no alarm.
  * @property notificationMinutesBefore Minutes before [alarmTimeMillis] to trigger a reminder.
  *   Ignored when [alarmTimeMillis] is `null`. Effective fire time = alarmTimeMillis - this offset.
- * @property folderGuid   Optional folder GUID this event belongs to.
+ * @property tagGuids     GUIDs of tags assigned to this note (may be empty).
+ * @property createdAtMillis Epoch ms when the note was first persisted.
+ * @property updatedAtMillis Epoch ms when the note was last modified.
  */
 data class CalendarEvent(
     val id: Long = 0L,
+    val title: String = "",
     val description: String,
     val startTimeMillis: Long,
     val endTimeMillis: Long,
@@ -27,7 +31,9 @@ data class CalendarEvent(
     val notificationMinutesBefore: Int = 30,
     val alarmTimeMillis: Long? = null,
     val isCompleted: Boolean = false,
-    val folderGuid: String? = null,
+    val tagGuids: Set<String> = emptySet(),
+    val createdAtMillis: Long = 0L,
+    val updatedAtMillis: Long = 0L,
 )
 
 /**
@@ -37,3 +43,6 @@ data class CalendarEvent(
 enum class EventColor {
     DEFAULT, RED, ORANGE, YELLOW, GREEN, BLUE, PURPLE
 }
+
+/** Headline for lists and notifications. */
+fun CalendarEvent.displayHeadline(): String = title.ifBlank { description }

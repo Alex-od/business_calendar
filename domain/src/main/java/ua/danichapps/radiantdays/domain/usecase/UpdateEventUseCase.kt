@@ -24,8 +24,8 @@ class UpdateEventUseCase(private val repository: CalendarEventRepository) {
         if (event.id == 0L) {
             return DomainResult.Error(IllegalArgumentException("Cannot update an event with id=0"))
         }
-        if (event.description.isBlank()) {
-            return DomainResult.Error(IllegalArgumentException("Description must not be blank"))
+        if (event.title.isBlank() && event.description.isBlank()) {
+            return DomainResult.Error(IllegalArgumentException("Title or note text must not be blank"))
         }
         if (event.endTimeMillis < event.startTimeMillis) {
             return DomainResult.Error(IllegalArgumentException("End time must not be before start time"))

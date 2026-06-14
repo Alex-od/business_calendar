@@ -12,6 +12,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class CalendarEventDto(
     @SerialName("id")                         val id: Long,
+    @SerialName("title")                      val title: String = "",
     @SerialName("description")                val description: String,
     @SerialName("start_time_millis")          val startTimeMillis: Long,
     @SerialName("end_time_millis")            val endTimeMillis: Long,
@@ -20,5 +21,7 @@ data class CalendarEventDto(
     @SerialName("notification_minutes_before") val notificationMinutesBefore: Int,
     @SerialName("alarm_time_millis")           val alarmTimeMillis: Long? = null,
     @SerialName("is_completed")                val isCompleted: Boolean = false,
-    @SerialName("folder_guid")                 val folderGuid: String? = null,
+    @SerialName("tag_guids")                  val tagGuids: List<String> = emptyList(),
+    @SerialName("created_at_millis")          val createdAtMillis: Long = 0L,
+    @SerialName("updated_at_millis")          val updatedAtMillis: Long = 0L,
 )

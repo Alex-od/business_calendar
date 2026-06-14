@@ -6,16 +6,16 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Update
 import kotlinx.coroutines.flow.Flow
-import ua.danichapps.radiantdays.data.local.entity.FolderEntity
+import ua.danichapps.radiantdays.data.local.entity.TagEntity
 
 @Dao
-interface FolderDao {
-    @Query("SELECT * FROM folders ORDER BY is_pinned DESC, name COLLATE NOCASE ASC")
-    fun getFolders(): Flow<List<FolderEntity>>
+interface TagDao {
+    @Query("SELECT * FROM tags ORDER BY is_pinned DESC, name COLLATE NOCASE ASC")
+    fun getTags(): Flow<List<TagEntity>>
 
     @Query(
         """
-        SELECT COUNT(*) FROM folders
+        SELECT COUNT(*) FROM tags
         WHERE name = :name COLLATE NOCASE
         AND (:excludeGuid IS NULL OR guid != :excludeGuid)
         """
@@ -23,11 +23,11 @@ interface FolderDao {
     suspend fun countByName(name: String, excludeGuid: String?): Int
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
-    suspend fun insertFolder(folder: FolderEntity)
+    suspend fun insertTag(tag: TagEntity)
 
     @Update
-    suspend fun updateFolder(folder: FolderEntity): Int
+    suspend fun updateTag(tag: TagEntity): Int
 
-    @Query("DELETE FROM folders WHERE guid = :guid")
-    suspend fun deleteFolder(guid: String): Int
+    @Query("DELETE FROM tags WHERE guid = :guid")
+    suspend fun deleteTag(guid: String): Int
 }
