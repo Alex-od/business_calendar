@@ -10,16 +10,11 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import ua.danichapps.radiantdays.ui.addevent.AddEditEventScreen
 import ua.danichapps.radiantdays.ui.calendar.CalendarScreen
-import ua.danichapps.radiantdays.ui.folders.FolderSettingsScreen
-import ua.danichapps.radiantdays.ui.foldernotes.FolderNotesScreen
+import ua.danichapps.radiantdays.ui.aiactions.AiActionsScreen
 import ua.danichapps.radiantdays.ui.settings.SettingsScreen
+import ua.danichapps.radiantdays.ui.tags.TagSettingsScreen
+import ua.danichapps.radiantdays.ui.tagnotes.TagNotesScreen
 
-/**
- * Root navigation graph.
- *
- * Compose Navigation is configured here; screens are composable lambdas,
- * keeping the NavHost completely declarative.
- */
 @Composable
 fun AppNavigation(
     pendingEditEventId: Long? = null,
@@ -36,14 +31,13 @@ fun AppNavigation(
     }
 
     NavHost(
-        navController  = navController,
+        navController = navController,
         startDestination = Screen.Calendar.route,
     ) {
 
-        // в”Ђв”Ђ Calendar в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         composable(Screen.Calendar.route) {
             CalendarScreen(
-                onAddEvent  = { dayMillis ->
+                onAddEvent = { dayMillis ->
                     navController.navigate(Screen.AddEvent.createRoute(dayMillis))
                 },
                 onEditEvent = { eventId ->
@@ -52,56 +46,62 @@ fun AppNavigation(
                 onOpenSettings = {
                     navController.navigate(Screen.Settings.route)
                 },
-                onOpenFolders = {
-                    navController.navigate(Screen.FolderSettings.createRoute())
+                onOpenTags = {
+                    navController.navigate(Screen.TagSettings.createRoute())
                 },
             )
         }
 
-        // в”Ђв”Ђ Add new event в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         composable(Screen.Settings.route) {
-            SettingsScreen(onNavigateBack = { navController.popBackStack() })
+            SettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onOpenAiActions = { navController.navigate(Screen.AiActions.route) },
+            )
+        }
+
+        composable(Screen.AiActions.route) {
+            AiActionsScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(
-            route = Screen.FolderSettings.route,
+            route = Screen.TagSettings.route,
             arguments = listOf(
-                navArgument(Screen.FolderSettings.ARG_RETURN_AFTER_CREATE) {
+                navArgument(Screen.TagSettings.ARG_RETURN_AFTER_CREATE) {
                     type = NavType.BoolType
                     defaultValue = false
                 },
             ),
         ) { backStack ->
             val returnAfterCreate = backStack.arguments
-                ?.getBoolean(Screen.FolderSettings.ARG_RETURN_AFTER_CREATE)
+                ?.getBoolean(Screen.TagSettings.ARG_RETURN_AFTER_CREATE)
                 ?: false
 
-            FolderSettingsScreen(
+            TagSettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 returnAfterCreate = returnAfterCreate,
-                onFolderCreated = { folderGuid ->
+                onTagCreated = { tagGuid ->
                     navController.previousBackStackEntry?.savedStateHandle?.set(
-                        Screen.FolderSettings.RESULT_CREATED_FOLDER_GUID,
-                        folderGuid,
+                        Screen.TagSettings.RESULT_CREATED_TAG_GUID,
+                        tagGuid,
                     )
                 },
-                onOpenFolder = { folderGuid ->
-                    navController.navigate(Screen.FolderNotes.createRoute(folderGuid))
+                onOpenTag = { tagGuid ->
+                    navController.navigate(Screen.TagNotes.createRoute(tagGuid))
                 },
             )
         }
 
         composable(
-            route = Screen.FolderNotes.route,
+            route = Screen.TagNotes.route,
             arguments = listOf(
-                navArgument(Screen.FolderNotes.ARG_FOLDER_GUID) { type = NavType.StringType },
+                navArgument(Screen.TagNotes.ARG_TAG_GUID) { type = NavType.StringType },
             ),
         ) { backStack ->
-            val folderGuid = backStack.arguments?.getString(Screen.FolderNotes.ARG_FOLDER_GUID)
+            val tagGuid = backStack.arguments?.getString(Screen.TagNotes.ARG_TAG_GUID)
                 ?: return@composable
 
-            FolderNotesScreen(
-                folderGuid = folderGuid,
+            TagNotesScreen(
+                tagGuid = tagGuid,
                 onNavigateBack = { navController.popBackStack() },
                 onEditNote = { noteId ->
                     navController.navigate(Screen.EditEvent.createRoute(noteId))
@@ -110,50 +110,51 @@ fun AppNavigation(
         }
 
         composable(
-            route     = Screen.AddEvent.route,
+            route = Screen.AddEvent.route,
             arguments = listOf(
                 navArgument(Screen.AddEvent.ARG_SELECTED_DAY) { type = NavType.LongType },
             ),
         ) { backStack ->
             val selectedDay = backStack.arguments?.getLong(Screen.AddEvent.ARG_SELECTED_DAY)
                 ?: System.currentTimeMillis()
-            val createdFolderGuid = backStack.savedStateHandle
-                .getStateFlow<String?>(Screen.FolderSettings.RESULT_CREATED_FOLDER_GUID, null)
+            val createdTagGuid = backStack.savedStateHandle
+                .getStateFlow<String?>(Screen.TagSettings.RESULT_CREATED_TAG_GUID, null)
                 .collectAsStateWithLifecycle()
 
             AddEditEventScreen(
                 initialDayMillis = selectedDay,
-                editingEventId   = null,
-                onNavigateBack   = { navController.popBackStack() },
-                onOpenFolders    = { navController.navigate(Screen.FolderSettings.createRoute(returnAfterCreate = true)) },
-                createdFolderGuid = createdFolderGuid.value,
-                onCreatedFolderGuidConsumed = {
-                    backStack.savedStateHandle[Screen.FolderSettings.RESULT_CREATED_FOLDER_GUID] = null
+                editingEventId = null,
+                onNavigateBack = { navController.popBackStack() },
+                onOpenTags = { navController.navigate(Screen.TagSettings.createRoute(returnAfterCreate = true)) },
+                onOpenAiActions = { navController.navigate(Screen.AiActions.route) },
+                createdTagGuid = createdTagGuid.value,
+                onCreatedTagGuidConsumed = {
+                    backStack.savedStateHandle[Screen.TagSettings.RESULT_CREATED_TAG_GUID] = null
                 },
             )
         }
 
-        // в”Ђв”Ђ Edit existing event в”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђв”Ђ
         composable(
-            route     = Screen.EditEvent.route,
+            route = Screen.EditEvent.route,
             arguments = listOf(
                 navArgument(Screen.EditEvent.ARG_EVENT_ID) { type = NavType.LongType },
             ),
         ) { backStack ->
             val eventId = backStack.arguments?.getLong(Screen.EditEvent.ARG_EVENT_ID)
                 ?: return@composable
-            val createdFolderGuid = backStack.savedStateHandle
-                .getStateFlow<String?>(Screen.FolderSettings.RESULT_CREATED_FOLDER_GUID, null)
+            val createdTagGuid = backStack.savedStateHandle
+                .getStateFlow<String?>(Screen.TagSettings.RESULT_CREATED_TAG_GUID, null)
                 .collectAsStateWithLifecycle()
 
             AddEditEventScreen(
                 initialDayMillis = System.currentTimeMillis(),
-                editingEventId   = eventId,
-                onNavigateBack   = { navController.popBackStack() },
-                onOpenFolders    = { navController.navigate(Screen.FolderSettings.createRoute(returnAfterCreate = true)) },
-                createdFolderGuid = createdFolderGuid.value,
-                onCreatedFolderGuidConsumed = {
-                    backStack.savedStateHandle[Screen.FolderSettings.RESULT_CREATED_FOLDER_GUID] = null
+                editingEventId = eventId,
+                onNavigateBack = { navController.popBackStack() },
+                onOpenTags = { navController.navigate(Screen.TagSettings.createRoute(returnAfterCreate = true)) },
+                onOpenAiActions = { navController.navigate(Screen.AiActions.route) },
+                createdTagGuid = createdTagGuid.value,
+                onCreatedTagGuidConsumed = {
+                    backStack.savedStateHandle[Screen.TagSettings.RESULT_CREATED_TAG_GUID] = null
                 },
             )
         }

@@ -14,10 +14,12 @@ import ua.danichapps.radiantdays.data.local.db.CalendarDatabase
 import ua.danichapps.radiantdays.data.local.db.CalendarDatabaseMigrations
 import ua.danichapps.radiantdays.data.remote.api.KtorCalendarDataSource
 import ua.danichapps.radiantdays.data.remote.api.RemoteCalendarDataSource
+import ua.danichapps.radiantdays.data.repository.AiActionRepositoryImpl
 import ua.danichapps.radiantdays.data.repository.CalendarEventRepositoryImpl
-import ua.danichapps.radiantdays.data.repository.FolderRepositoryImpl
+import ua.danichapps.radiantdays.data.repository.TagRepositoryImpl
+import ua.danichapps.radiantdays.domain.repository.AiActionRepository
 import ua.danichapps.radiantdays.domain.repository.CalendarEventRepository
-import ua.danichapps.radiantdays.domain.repository.FolderRepository
+import ua.danichapps.radiantdays.domain.repository.TagRepository
 
 /**
  * Koin module that wires the entire data layer.
@@ -42,7 +44,9 @@ val dataModule = module {
     }
 
     single { get<CalendarDatabase>().calendarEventDao() }
-    single { get<CalendarDatabase>().folderDao() }
+    single { get<CalendarDatabase>().tagDao() }
+    single { get<CalendarDatabase>().noteTagDao() }
+    single { get<CalendarDatabase>().aiActionDao() }
 
     // Ktor HTTP client
     single {
@@ -71,10 +75,14 @@ val dataModule = module {
 
     // Repository bindings
     single<CalendarEventRepository> {
-        CalendarEventRepositoryImpl(dao = get())
+        CalendarEventRepositoryImpl(dao = get(), noteTagDao = get())
     }
 
-    single<FolderRepository> {
-        FolderRepositoryImpl(dao = get())
+    single<TagRepository> {
+        TagRepositoryImpl(dao = get())
+    }
+
+    single<AiActionRepository> {
+        AiActionRepositoryImpl(dao = get())
     }
 }

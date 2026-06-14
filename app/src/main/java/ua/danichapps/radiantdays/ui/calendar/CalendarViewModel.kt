@@ -18,6 +18,10 @@ import ua.danichapps.radiantdays.notification.AlarmScheduler
 import ua.danichapps.radiantdays.domain.usecase.DeleteEventUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetEventsForDayUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetEventsForMonthUseCase
+import ua.danichapps.radiantdays.widget.CalendarWidgetUpdater
+import ua.danichapps.radiantdays.calendar.dayWindow
+import ua.danichapps.radiantdays.calendar.monthWindow
+import ua.danichapps.radiantdays.calendar.normaliseToDayStart
 import java.util.Calendar
 
 /**
@@ -37,6 +41,7 @@ class CalendarViewModel(
     private val getEventsForMonthUseCase: GetEventsForMonthUseCase,
     private val deleteEventUseCase: DeleteEventUseCase,
     private val alarmScheduler: AlarmScheduler,
+    private val widgetUpdater: CalendarWidgetUpdater,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CalendarUiState())
@@ -84,7 +89,10 @@ class CalendarViewModel(
     fun deleteEvent(id: Long) {
         viewModelScope.launch {
             deleteEventUseCase(id)
-                .onSuccess { alarmScheduler.cancel(id) }
+                .onSuccess {
+                    alarmScheduler.cancel(id)
+                    widgetUpdater.refresh()
+                }
                 .onError { _, message ->
                     _events.send(CalendarUiEvent.ShowError(message))
                 }
@@ -123,37 +131,5 @@ class CalendarViewModel(
                     _uiState.update { it.copy(eventsForMonth = grouped) }
                 }
         }
-    }
-
-    /** Midnight of the given epoch millis in the device's local timezone. */
-    private fun normaliseToDayStart(millis: Long): Long =
-        Calendar.getInstance().apply {
-            timeInMillis = millis
-            set(Calendar.HOUR_OF_DAY, 0)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
-
-    private fun dayWindow(millis: Long): Pair<Long, Long> {
-        val cal = Calendar.getInstance().apply {
-            timeInMillis = millis
-            set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0);      set(Calendar.MILLISECOND, 0)
-        }
-        val start = cal.timeInMillis
-        cal.add(Calendar.DAY_OF_MONTH, 1)
-        return start to cal.timeInMillis
-    }
-
-    private fun monthWindow(monthMillis: Long): Pair<Long, Long> {
-        val cal = Calendar.getInstance().apply { timeInMillis = monthMillis }
-        val year  = cal.get(Calendar.YEAR)
-        val month = cal.get(Calendar.MONTH)
-        cal.set(year, month, 1, 0, 0, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        val start = cal.timeInMillis
-        cal.add(Calendar.MONTH, 1)
-        return start to cal.timeInMillis
     }
 }

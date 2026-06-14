@@ -1,29 +1,30 @@
 package ua.danichapps.radiantdays.ui.addevent
 
-import ua.danichapps.radiantdays.domain.model.Folder
+import ua.danichapps.radiantdays.domain.model.AiAction
+import ua.danichapps.radiantdays.domain.model.Tag
 
-/**
- * Immutable snapshot of the add/edit event form state.
- *
- * Contains only **persistent** state (survives config change).
- * One-shot events (navigation, errors) are emitted via [AddEditEventViewModel.events] channel.
- *
- * @property editingEventId Non-null в†’ edit mode. `null` в†’ add mode.
- * @property descriptionError Inline validation error shown beneath the note field.
- */
 data class AddEditEventUiState(
     val isLoading: Boolean = false,
     val editingEventId: Long? = null,
 
-    // Form fields
+    val title: String = "",
     val description: String = "",
     val startTimeMillis: Long = System.currentTimeMillis(),
     val notificationMinutesBefore: Int = 0,
     val alarmTimeMillis: Long? = null,
     val isCompleted: Boolean = false,
-    val folders: List<Folder> = emptyList(),
-    val selectedFolderGuid: String? = null,
+    val tags: List<Tag> = emptyList(),
+    val selectedTagGuids: Set<String> = emptySet(),
+    val tagsExpanded: Boolean = false,
 
-    // Inline field validation (stays in state вЂ” it IS persistent UI state)
+    val titleError: String? = null,
     val descriptionError: String? = null,
+
+    val createdAtMillis: Long? = null,
+    val updatedAtMillis: Long? = null,
+
+    val visibleAiActions: List<AiAction> = emptyList(),
+    val aiSheetVisible: Boolean = false,
+    val aiLoading: Boolean = false,
+    val aiResultText: String? = null,
 )

@@ -34,6 +34,7 @@ internal object BridgeJsonCodec {
                 add(
                     buildJsonObject {
                         put("id", JsonPrimitive(event.id))
+                        put("title", JsonPrimitive(event.title))
                         put("description", JsonPrimitive(event.description))
                         put("start_time_millis", JsonPrimitive(event.startTimeMillis))
                         put("end_time_millis", JsonPrimitive(event.endTimeMillis))
@@ -44,6 +45,8 @@ internal object BridgeJsonCodec {
                             put("alarm_time_millis", JsonPrimitive(alarmTimeMillis))
                         }
                         put("is_completed", JsonPrimitive(event.isCompleted))
+                        put("created_at_millis", JsonPrimitive(event.createdAtMillis))
+                        put("updated_at_millis", JsonPrimitive(event.updatedAtMillis))
                     }
                 )
             }

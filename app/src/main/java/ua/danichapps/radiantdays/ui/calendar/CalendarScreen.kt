@@ -2,6 +2,7 @@ package ua.danichapps.radiantdays.ui.calendar
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,7 +26,6 @@ import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -63,16 +63,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
+import ua.danichapps.radiantdays.calendar.CalendarDay
+import ua.danichapps.radiantdays.calendar.DAY_LABELS
+import ua.danichapps.radiantdays.calendar.buildMonthDays
+import ua.danichapps.radiantdays.calendar.sameDay
 import ua.danichapps.radiantdays.domain.model.CalendarEvent
+import ua.danichapps.radiantdays.domain.model.displayHeadline
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
-
-// Constants
-
-/** Day-of-week header labels. Sunday-first to match [Calendar.DAY_OF_WEEK]. */
-private val DAY_LABELS = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
 
 // Screen
 
@@ -89,7 +89,7 @@ fun CalendarScreen(
     onAddEvent: (Long) -> Unit,
     onEditEvent: (Long) -> Unit,
     onOpenSettings: () -> Unit,
-    onOpenFolders: () -> Unit,
+    onOpenTags: () -> Unit,
     viewModel: CalendarViewModel = koinViewModel(),
 ) {
     // FIX #3: collectAsStateWithLifecycle stops collection when the screen is not visible
@@ -109,7 +109,7 @@ fun CalendarScreen(
         topBar = {
             CalendarTopBar(
                 onOpenSettings = onOpenSettings,
-                onOpenFolders  = onOpenFolders,
+                onOpenTags = onOpenTags,
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -170,7 +170,7 @@ fun CalendarScreen(
 @Composable
 private fun CalendarTopBar(
     onOpenSettings: () -> Unit,
-    onOpenFolders: () -> Unit,
+    onOpenTags: () -> Unit,
 ) {
     var isMenuExpanded by remember { mutableStateOf(false) }
 
@@ -192,10 +192,10 @@ private fun CalendarTopBar(
                     },
                 )
                 DropdownMenuItem(
-                    text = { Text("Folders") },
+                    text = { Text("Теги") },
                     onClick = {
                         isMenuExpanded = false
-                        onOpenFolders()
+                        onOpenTags()
                     },
                 )
             }
@@ -328,7 +328,7 @@ private fun MonthGrid(
                                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                         dayEvents.take(2).forEach { event ->
                                             Text(
-                                                text     = event.description,
+                                                text     = event.displayHeadline(),
                                                 style    = MaterialTheme.typography.labelSmall.copy(
                                                     fontSize        = 9.sp,
                                                     lineHeight      = 10.sp,
@@ -381,7 +381,7 @@ private fun EventListForDay(
         items(events, key = { it.id }) { event ->
             EventCard(
                 event    = event,
-                onEdit   = { onEditEvent(event.id) },
+                onClick  = { onEditEvent(event.id) },
                 onDelete = { onDeleteEvent(event.id) },
             )
         }
@@ -391,7 +391,7 @@ private fun EventListForDay(
 @Composable
 private fun EventCard(
     event: CalendarEvent,
-    onEdit: () -> Unit,
+    onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
     // SimpleDateFormat is not thread-safe; one instance per composable is safe in single-threaded Compose
@@ -400,7 +400,14 @@ private fun EventCard(
     val contentAlpha = if (event.isCompleted) 0.5f else 1f
 
     Card(
-        modifier  = Modifier.fillMaxWidth().alpha(contentAlpha),
+        modifier = Modifier
+            .fillMaxWidth()
+            .alpha(contentAlpha)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onClick,
+            ),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
     ) {
         Row(
@@ -426,7 +433,7 @@ private fun EventCard(
                         )
                     }
                     Text(
-                        text       = event.description,
+                        text       = event.displayHeadline(),
                         style      = MaterialTheme.typography.bodyLarge.copy(
                             textDecoration = if (event.isCompleted) {
                                 TextDecoration.LineThrough
@@ -437,6 +444,15 @@ private fun EventCard(
                         fontWeight = FontWeight.SemiBold,
                         maxLines   = 1,
                         overflow   = TextOverflow.Ellipsis,
+                    )
+                }
+                if (event.title.isNotBlank() && event.description.isNotBlank()) {
+                    Text(
+                        text = event.description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
                 if (!event.isAllDay) {
@@ -452,9 +468,6 @@ private fun EventCard(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-            }
-            IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, contentDescription = "Edit event")
             }
             IconButton(onClick = onDelete) {
                 Icon(Icons.Default.Delete, contentDescription = "Delete event",
@@ -485,32 +498,4 @@ private fun Modifier.swipeMonths(
         onDragCancel = { totalDrag = 0f },
         onHorizontalDrag = { _, dragAmount -> totalDrag += dragAmount },
     )
-}
-
-private sealed interface CalendarDay {
-    data object Empty : CalendarDay
-    data class Day(val number: Int, val millis: Long) : CalendarDay
-}
-
-private fun buildMonthDays(monthMillis: Long): List<CalendarDay> {
-    val cal   = Calendar.getInstance().apply { timeInMillis = monthMillis }
-    val year  = cal.get(Calendar.YEAR)
-    val month = cal.get(Calendar.MONTH)
-    cal.set(year, month, 1)
-    val firstWeekDay = cal.get(Calendar.DAY_OF_WEEK)
-    val daysInMonth  = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
-    val days = mutableListOf<CalendarDay>()
-    repeat(firstWeekDay - 1) { days += CalendarDay.Empty }
-    for (day in 1..daysInMonth) {
-        cal.set(year, month, day, 0, 0, 0)
-        cal.set(Calendar.MILLISECOND, 0)
-        days += CalendarDay.Day(day, cal.timeInMillis)
-    }
-    return days
-}
-
-private fun sameDay(refCal: Calendar, millis: Long): Boolean {
-    val other = Calendar.getInstance().apply { timeInMillis = millis }
-    return refCal.get(Calendar.YEAR)        == other.get(Calendar.YEAR) &&
-           refCal.get(Calendar.DAY_OF_YEAR) == other.get(Calendar.DAY_OF_YEAR)
 }

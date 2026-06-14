@@ -13,14 +13,18 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import ua.danichapps.radiantdays.domain.model.AiNoteContext
 import ua.danichapps.radiantdays.domain.model.CalendarEvent
 import ua.danichapps.radiantdays.domain.model.onError
 import ua.danichapps.radiantdays.domain.model.onSuccess
 import ua.danichapps.radiantdays.domain.repository.CalendarEventRepository
 import ua.danichapps.radiantdays.domain.usecase.AddEventUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetTagsUseCase
+import ua.danichapps.radiantdays.domain.usecase.GetVisibleAiActionsUseCase
+import ua.danichapps.radiantdays.domain.usecase.RunAiActionUseCase
 import ua.danichapps.radiantdays.domain.usecase.UpdateEventUseCase
 import ua.danichapps.radiantdays.notification.AlarmScheduler
+import ua.danichapps.radiantdays.widget.CalendarWidgetUpdater
 import java.util.Calendar
 
 private const val DEFAULT_ALARM_OFFSET_HOURS = 1L
@@ -30,8 +34,11 @@ class AddEditEventViewModel(
     private val addEventUseCase: AddEventUseCase,
     private val updateEventUseCase: UpdateEventUseCase,
     private val getTagsUseCase: GetTagsUseCase,
+    private val getVisibleAiActionsUseCase: GetVisibleAiActionsUseCase,
+    private val runAiActionUseCase: RunAiActionUseCase,
     private val repository: CalendarEventRepository,
     private val alarmScheduler: AlarmScheduler,
+    private val widgetUpdater: CalendarWidgetUpdater,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddEditEventUiState())
@@ -44,6 +51,62 @@ class AddEditEventViewModel(
 
     init {
         observeTags()
+        observeVisibleAiActions()
+    }
+
+    fun onAiButtonClick() {
+        if (_uiState.value.description.isBlank()) return
+        _uiState.update { it.copy(aiSheetVisible = true) }
+    }
+
+    fun onAiSheetDismiss() {
+        _uiState.update { it.copy(aiSheetVisible = false) }
+    }
+
+    fun onAiActionSelected(actionGuid: String) {
+        val state = _uiState.value
+        _uiState.update { it.copy(aiSheetVisible = false, aiLoading = true) }
+        viewModelScope.launch {
+            val tagNames = state.tags
+                .filter { tag -> tag.guid in state.selectedTagGuids }
+                .map { tag -> tag.name }
+            val context = AiNoteContext(
+                text = state.description,
+                title = state.title,
+                tagNames = tagNames,
+                noteDateMillis = state.startTimeMillis,
+            )
+            runAiActionUseCase(actionGuid, context)
+                .onSuccess { result ->
+                    _uiState.update { it.copy(aiLoading = false, aiResultText = result) }
+                }
+                .onError { _, message ->
+                    _uiState.update { it.copy(aiLoading = false) }
+                    _events.send(AddEditEventUiEvent.ShowError(message))
+                }
+        }
+    }
+
+    fun onAiResultDismiss() {
+        _uiState.update { it.copy(aiResultText = null) }
+    }
+
+    fun onAiResultReplace() {
+        val result = _uiState.value.aiResultText ?: return
+        onDescriptionChange(result)
+        onAiResultDismiss()
+    }
+
+    fun onAiResultAppend() {
+        val result = _uiState.value.aiResultText ?: return
+        val current = _uiState.value.description
+        val separator = when {
+            current.isBlank() -> ""
+            current.endsWith(' ') || current.endsWith('\n') -> ""
+            else -> " "
+        }
+        onDescriptionChange(current + separator + result)
+        onAiResultDismiss()
     }
 
     fun loadEvent(id: Long) {
@@ -62,6 +125,8 @@ class AddEditEventViewModel(
                         alarmTimeMillis = event.alarmTimeMillis,
                         isCompleted = event.isCompleted,
                         selectedTagGuids = event.tagGuids,
+                        createdAtMillis = event.createdAtMillis,
+                        updatedAtMillis = event.updatedAtMillis,
                     )
                 }
             } else {
@@ -92,47 +157,65 @@ class AddEditEventViewModel(
         scheduleAutoSave()
     }
 
-    fun onStartTimeChange(millis: Long) = _uiState.update { it.copy(startTimeMillis = millis) }
-    fun onAddAlarmClick() = _uiState.update { state ->
-        if (state.alarmTimeMillis != null) return@update state
-        state.copy(alarmTimeMillis = System.currentTimeMillis() + DEFAULT_ALARM_OFFSET_HOURS * 3_600_000L)
+    fun onStartTimeChange(millis: Long) {
+        _uiState.update { it.copy(startTimeMillis = millis) }
+        scheduleAutoSave()
     }
 
-    fun onRemoveAlarmClick() = _uiState.update { it.copy(alarmTimeMillis = null) }
-    fun onAlarmTimeChange(millis: Long) = _uiState.update { it.copy(alarmTimeMillis = millis) }
-    fun onIsCompletedChange(value: Boolean) = _uiState.update { it.copy(isCompleted = value) }
-    fun onNotificationMinutesChange(min: Int) = _uiState.update { it.copy(notificationMinutesBefore = min) }
-
-    fun onTagToggle(tagGuid: String) = _uiState.update { state ->
-        val next = if (tagGuid in state.selectedTagGuids) {
-            state.selectedTagGuids - tagGuid
-        } else {
-            state.selectedTagGuids + tagGuid
+    fun onAddAlarmClick() {
+        _uiState.update { state ->
+            if (state.alarmTimeMillis != null) return@update state
+            state.copy(alarmTimeMillis = System.currentTimeMillis() + DEFAULT_ALARM_OFFSET_HOURS * 3_600_000L)
         }
-        state.copy(selectedTagGuids = next)
+        scheduleAutoSave()
     }
 
-    fun onTagAddedFromSettings(tagGuid: String) = _uiState.update { state ->
-        state.copy(selectedTagGuids = state.selectedTagGuids + tagGuid)
+    fun onRemoveAlarmClick() {
+        _uiState.update { it.copy(alarmTimeMillis = null) }
+        scheduleAutoSave()
+    }
+
+    fun onAlarmTimeChange(millis: Long) {
+        _uiState.update { it.copy(alarmTimeMillis = millis) }
+        scheduleAutoSave()
+    }
+
+    fun onIsCompletedChange(value: Boolean) {
+        _uiState.update { it.copy(isCompleted = value) }
+        scheduleAutoSave()
+    }
+
+    fun onNotificationMinutesChange(min: Int) {
+        _uiState.update { it.copy(notificationMinutesBefore = min) }
+        scheduleAutoSave()
+    }
+
+    fun onTagToggle(tagGuid: String) {
+        _uiState.update { state ->
+            val next = if (tagGuid in state.selectedTagGuids) {
+                state.selectedTagGuids - tagGuid
+            } else {
+                state.selectedTagGuids + tagGuid
+            }
+            state.copy(selectedTagGuids = next)
+        }
+        scheduleAutoSave()
+    }
+
+    fun onTagAddedFromSettings(tagGuid: String) {
+        _uiState.update { state ->
+            state.copy(selectedTagGuids = state.selectedTagGuids + tagGuid)
+        }
+        scheduleAutoSave()
     }
 
     fun onTagsExpandedToggle() = _uiState.update { it.copy(tagsExpanded = !it.tagsExpanded) }
 
-    fun save() {
+    fun onBackClick() {
         autoSaveJob?.cancel()
-        val state = _uiState.value
-        if (state.title.isBlank() && state.description.isBlank()) {
-            _uiState.update {
-                it.copy(
-                    titleError = "Укажите заголовок или текст заметки",
-                    descriptionError = "Укажите заголовок или текст заметки",
-                )
-            }
-            return
-        }
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            performSave(state, isManualSave = true)
+            performSave(_uiState.value)
+            _events.send(AddEditEventUiEvent.NavigateBack)
         }
     }
 
@@ -140,45 +223,51 @@ class AddEditEventViewModel(
         autoSaveJob?.cancel()
         autoSaveJob = viewModelScope.launch {
             delay(AUTO_SAVE_DEBOUNCE_MS)
-            performSave(_uiState.value, isManualSave = false)
+            performSave(_uiState.value)
         }
     }
 
-    private suspend fun performSave(state: AddEditEventUiState, isManualSave: Boolean) {
+    private suspend fun performSave(state: AddEditEventUiState) {
         if (state.title.isBlank() && state.description.isBlank()) return
         val event = buildEvent(state)
         if (state.editingEventId != null) {
             updateEventUseCase(event)
                 .onSuccess {
+                    val now = System.currentTimeMillis()
+                    _uiState.update { current ->
+                        current.copy(
+                            createdAtMillis = current.createdAtMillis ?: now,
+                            updatedAtMillis = now,
+                        )
+                    }
                     if (event.alarmTimeMillis == null || event.isCompleted) {
                         alarmScheduler.cancel(event.id)
                     } else {
                         alarmScheduler.schedule(event)
                     }
-                    if (isManualSave) {
-                        _uiState.update { it.copy(isLoading = false) }
-                        _events.send(AddEditEventUiEvent.NavigateBack)
-                    }
+                    widgetUpdater.refresh()
                 }
                 .onError { _, msg ->
-                    if (isManualSave) _uiState.update { it.copy(isLoading = false) }
                     _events.send(AddEditEventUiEvent.ShowError(msg))
                 }
         } else {
             addEventUseCase(event)
                 .onSuccess { newId ->
+                    val now = System.currentTimeMillis()
                     val saved = event.copy(id = newId)
-                    _uiState.update { it.copy(editingEventId = newId) }
+                    _uiState.update {
+                        it.copy(
+                            editingEventId = newId,
+                            createdAtMillis = now,
+                            updatedAtMillis = now,
+                        )
+                    }
                     if (saved.alarmTimeMillis != null && !saved.isCompleted) {
                         alarmScheduler.schedule(saved)
                     }
-                    if (isManualSave) {
-                        _uiState.update { it.copy(isLoading = false) }
-                        _events.send(AddEditEventUiEvent.NavigateBack)
-                    }
+                    widgetUpdater.refresh()
                 }
                 .onError { _, msg ->
-                    if (isManualSave) _uiState.update { it.copy(isLoading = false) }
                     _events.send(AddEditEventUiEvent.ShowError(msg))
                 }
         }
@@ -212,6 +301,22 @@ class AddEditEventViewModel(
                         }.toSet()
                         state.copy(tags = tags, selectedTagGuids = validGuids)
                     }
+                }
+        }
+    }
+
+    private fun observeVisibleAiActions() {
+        viewModelScope.launch {
+            getVisibleAiActionsUseCase()
+                .catch { throwable ->
+                    _events.send(
+                        AddEditEventUiEvent.ShowError(
+                            throwable.message ?: "Не удалось загрузить AI-действия",
+                        ),
+                    )
+                }
+                .collect { actions ->
+                    _uiState.update { it.copy(visibleAiActions = actions) }
                 }
         }
     }
