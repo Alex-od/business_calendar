@@ -229,6 +229,38 @@ class CalendarDatabaseMigrationTest {
         db.close()
     }
 
+    @Test
+    fun migrate11To12_createsAiActionsWithDefaults() {
+        helper.createDatabase(TEST_DB, 11).close()
+
+        val db = helper.runMigrationsAndValidate(
+            TEST_DB,
+            12,
+            true,
+            CalendarDatabaseMigrations.MIGRATION_11_12,
+        )
+
+        db.query("SELECT COUNT(*) FROM ai_actions").use { cursor ->
+            cursor.moveToFirst()
+            assertEquals(3, cursor.getInt(0))
+        }
+
+        db.query(
+            """
+            SELECT name, is_built_in, sort_order
+            FROM ai_actions
+            WHERE guid = 'a1000000-0000-4000-8000-000000000001'
+            """.trimIndent(),
+        ).use { cursor ->
+            cursor.moveToFirst()
+            assertEquals("Улучшить текст", cursor.getString(0))
+            assertEquals(1, cursor.getInt(1))
+            assertEquals(0, cursor.getInt(2))
+        }
+
+        db.close()
+    }
+
     private companion object {
         const val TEST_DB = "migration-test"
     }
