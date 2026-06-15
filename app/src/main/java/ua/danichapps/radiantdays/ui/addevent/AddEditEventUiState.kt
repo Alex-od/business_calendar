@@ -27,4 +27,6 @@ data class AddEditEventUiState(
     val aiSheetVisible: Boolean = false,
     val aiLoading: Boolean = false,
     val aiResultText: String? = null,
+
+    val canUndoDescription: Boolean = false,
 )

@@ -29,6 +29,8 @@ import java.util.Calendar
 
 private const val DEFAULT_ALARM_OFFSET_HOURS = 1L
 private const val AUTO_SAVE_DEBOUNCE_MS = 500L
+private const val DESCRIPTION_UNDO_LIMIT = 10
+private const val DESCRIPTION_UNDO_GROUP_MS = 1_000L
 
 class AddEditEventViewModel(
     private val addEventUseCase: AddEventUseCase,
@@ -48,6 +50,11 @@ class AddEditEventViewModel(
     val events: Flow<AddEditEventUiEvent> = _events.receiveAsFlow()
 
     private var autoSaveJob: Job? = null
+
+    private val descriptionUndoStack = ArrayDeque<String>()
+    private var descriptionUndoGroupBase: String? = null
+    private var descriptionUndoGroupJob: Job? = null
+    private var isUndoingDescription = false
 
     init {
         observeTags()
@@ -93,7 +100,7 @@ class AddEditEventViewModel(
 
     fun onAiResultReplace() {
         val result = _uiState.value.aiResultText ?: return
-        onDescriptionChange(result)
+        applyDiscreteDescriptionChange(result)
         onAiResultDismiss()
     }
 
@@ -105,7 +112,7 @@ class AddEditEventViewModel(
             current.endsWith(' ') || current.endsWith('\n') -> ""
             else -> " "
         }
-        onDescriptionChange(current + separator + result)
+        applyDiscreteDescriptionChange(current + separator + result)
         onAiResultDismiss()
     }
 
@@ -114,6 +121,7 @@ class AddEditEventViewModel(
             _uiState.update { it.copy(isLoading = true) }
             val event = repository.getEventById(id)
             if (event != null) {
+                clearDescriptionUndo()
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -137,6 +145,7 @@ class AddEditEventViewModel(
     }
 
     fun setInitialDay(dayMillis: Long) {
+        clearDescriptionUndo()
         val startAt9 = Calendar.getInstance().apply {
             timeInMillis = dayMillis
             set(Calendar.HOUR_OF_DAY, 9)
@@ -153,8 +162,107 @@ class AddEditEventViewModel(
     }
 
     fun onDescriptionChange(value: String) {
+        if (isUndoingDescription) {
+            setDescription(value)
+            return
+        }
+        val current = _uiState.value.description
+        if (value == current) return
+
+        if (descriptionUndoGroupBase == null) {
+            descriptionUndoGroupBase = current
+            updateCanUndoDescription()
+        }
+        setDescription(value)
+        scheduleUndoGroupCommit()
+    }
+
+    fun onDescriptionChangeFromVoice(value: String) {
+        applyDiscreteDescriptionChange(value)
+    }
+
+    fun onDescriptionUndo() {
+        descriptionUndoGroupJob?.cancel()
+        descriptionUndoGroupJob = null
+
+        val groupBase = descriptionUndoGroupBase
+        if (groupBase != null) {
+            descriptionUndoGroupBase = null
+            updateCanUndoDescription()
+            isUndoingDescription = true
+            setDescription(groupBase)
+            isUndoingDescription = false
+            return
+        }
+
+        if (descriptionUndoStack.isEmpty()) return
+
+        flushUndoGroup()
+        val previous = descriptionUndoStack.removeLast()
+        updateCanUndoDescription()
+        isUndoingDescription = true
+        setDescription(previous)
+        isUndoingDescription = false
+    }
+
+    private fun setDescription(value: String) {
         _uiState.update { it.copy(description = value, descriptionError = null) }
         scheduleAutoSave()
+    }
+
+    private fun applyDiscreteDescriptionChange(value: String) {
+        if (value == _uiState.value.description) return
+        flushUndoGroup()
+        pushUndoSnapshot(_uiState.value.description)
+        descriptionUndoGroupBase = null
+        setDescription(value)
+    }
+
+    private fun scheduleUndoGroupCommit() {
+        descriptionUndoGroupJob?.cancel()
+        descriptionUndoGroupJob = viewModelScope.launch {
+            delay(DESCRIPTION_UNDO_GROUP_MS)
+            val base = descriptionUndoGroupBase ?: return@launch
+            pushUndoSnapshot(base)
+            descriptionUndoGroupBase = null
+            updateCanUndoDescription()
+            descriptionUndoGroupJob = null
+        }
+    }
+
+    private fun pushUndoSnapshot(text: String) {
+        if (descriptionUndoStack.lastOrNull() == text) return
+        if (descriptionUndoStack.size >= DESCRIPTION_UNDO_LIMIT) {
+            descriptionUndoStack.removeFirst()
+        }
+        descriptionUndoStack.addLast(text)
+        updateCanUndoDescription()
+    }
+
+    private fun flushUndoGroup() {
+        descriptionUndoGroupJob?.cancel()
+        descriptionUndoGroupJob = null
+        val base = descriptionUndoGroupBase
+        if (base != null) {
+            pushUndoSnapshot(base)
+            descriptionUndoGroupBase = null
+            updateCanUndoDescription()
+        }
+    }
+
+    private fun clearDescriptionUndo() {
+        descriptionUndoGroupJob?.cancel()
+        descriptionUndoGroupJob = null
+        descriptionUndoGroupBase = null
+        descriptionUndoStack.clear()
+        updateCanUndoDescription()
+    }
+
+    private fun updateCanUndoDescription() {
+        val canUndo = descriptionUndoStack.isNotEmpty() || descriptionUndoGroupBase != null
+        if (_uiState.value.canUndoDescription != canUndo) {
+            _uiState.update { it.copy(canUndoDescription = canUndo) }
+        }
     }
 
     fun onStartTimeChange(millis: Long) {

@@ -1,7 +1,5 @@
 package ua.danichapps.radiantdays.ui.addevent
 
-import android.content.ClipData
-import android.content.ClipboardManager
 import android.content.Context
 import android.Manifest
 import android.os.Build
@@ -15,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -29,6 +28,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Undo
 import androidx.compose.material.icons.filled.AlarmAdd
 import androidx.compose.material.icons.filled.AlarmOff
 import androidx.compose.material.icons.filled.Alarm
@@ -70,6 +70,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
@@ -84,7 +85,6 @@ import ua.danichapps.radiantdays.ui.common.ColoredTagChip
 import ua.danichapps.radiantdays.ui.common.CompactFilterChip
 import ua.danichapps.radiantdays.ui.common.TagChipSpacing
 import ua.danichapps.radiantdays.ui.common.appendVoiceTextToFieldValue
-import ua.danichapps.radiantdays.ui.common.formatNoteDateTime
 import ua.danichapps.radiantdays.ui.common.rememberVoiceInputLauncher
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -187,6 +187,8 @@ fun AddEditEventScreen(
         EventForm(
             uiState = uiState,
             onDescriptionChange = viewModel::onDescriptionChange,
+            onDescriptionChangeFromVoice = viewModel::onDescriptionChangeFromVoice,
+            onDescriptionUndo = viewModel::onDescriptionUndo,
             onAlarmTimeChange = viewModel::onAlarmTimeChange,
             onNotificationMinutesChange = viewModel::onNotificationMinutesChange,
             onIsCompletedChange = viewModel::onIsCompletedChange,
@@ -233,11 +235,18 @@ fun AddEditEventScreen(
             onDismissRequest = viewModel::onAiResultDismiss,
             title = { Text("Результат AI") },
             text = {
-                Text(
-                    text = resultText,
-                    maxLines = 8,
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                val maxTextHeight = (LocalConfiguration.current.screenHeightDp * 0.70f).dp
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(max = maxTextHeight)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    Text(
+                        text = resultText,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
             },
             confirmButton = {
                 TextButton(onClick = viewModel::onAiResultReplace) {
@@ -247,18 +256,7 @@ fun AddEditEventScreen(
             dismissButton = {
                 Row {
                     TextButton(onClick = viewModel::onAiResultAppend) {
-                        Text("Дописать")
-                    }
-                    TextButton(
-                        onClick = {
-                            copyToClipboard(context, resultText)
-                            viewModel.onAiResultDismiss()
-                            scope.launch {
-                                snackbarHostState.showSnackbar("Скопировано")
-                            }
-                        },
-                    ) {
-                        Text("Скопировать")
+                        Text("Добавить")
                     }
                     TextButton(onClick = viewModel::onAiResultDismiss) {
                         Text("Отмена")
@@ -285,6 +283,8 @@ private fun borderlessTextFieldColors() = TextFieldDefaults.colors(
 private fun EventForm(
     uiState: AddEditEventUiState,
     onDescriptionChange: (String) -> Unit,
+    onDescriptionChangeFromVoice: (String) -> Unit,
+    onDescriptionUndo: () -> Unit,
     onAlarmTimeChange: (Long) -> Unit,
     onNotificationMinutesChange: (Int) -> Unit,
     onIsCompletedChange: (Boolean) -> Unit,
@@ -294,7 +294,6 @@ private fun EventForm(
 ) {
     val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-    val bodyScrollState = rememberScrollState()
     val bodyTextStyle = MaterialTheme.typography.bodyLarge
 
     var showAlarmDatePicker by remember { mutableStateOf(false) }
@@ -314,7 +313,7 @@ private fun EventForm(
     val startVoiceInput = rememberVoiceInputLauncher(
         onResult = { spoken ->
             descriptionValue = appendVoiceTextToFieldValue(descriptionValue, spoken)
-            onDescriptionChange(descriptionValue.text)
+            onDescriptionChangeFromVoice(descriptionValue.text)
         },
         onUnavailable = onVoiceInputUnavailable,
     )
@@ -323,7 +322,6 @@ private fun EventForm(
         modifier = modifier
             .fillMaxSize()
             .imePadding()
-            .verticalScroll(bodyScrollState)
             .padding(16.dp),
     ) {
         uiState.alarmTimeMillis?.let { alarmTimeMillis ->
@@ -346,8 +344,15 @@ private fun EventForm(
 
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
+            IconButton(
+                onClick = onDescriptionUndo,
+                enabled = uiState.canUndoDescription,
+            ) {
+                Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Отменить")
+            }
+            Spacer(Modifier.weight(1f))
             IconButton(onClick = startVoiceInput) {
                 Icon(Icons.Default.Mic, contentDescription = "Голосовой ввод")
             }
@@ -365,7 +370,9 @@ private fun EventForm(
                 descriptionValue = newValue
                 onDescriptionChange(newValue.text)
             },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
             textStyle = bodyTextStyle,
             colors = borderlessTextFieldColors(),
             minLines = 10,
@@ -380,21 +387,6 @@ private fun EventForm(
             )
         }
 
-        val createdAt = uiState.createdAtMillis
-        val updatedAt = uiState.updatedAtMillis
-        if (createdAt != null && updatedAt != null) {
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = "Создано: ${formatNoteDateTime(createdAt)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Text(
-                text = "Изменено: ${formatNoteDateTime(updatedAt)}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
     }
 
     val alarmTimeMillis = uiState.alarmTimeMillis
@@ -738,10 +730,5 @@ private fun AiActionsBottomSheetContent(
             }
         }
     }
-}
-
-private fun copyToClipboard(context: Context, text: String) {
-    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-    clipboard.setPrimaryClip(ClipData.newPlainText("ai_result", text))
 }
 
