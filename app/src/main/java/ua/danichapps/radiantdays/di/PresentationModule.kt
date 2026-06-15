@@ -37,6 +37,7 @@ val presentationModule = module {
             getTagsUseCase = get(),
             getVisibleAiActionsUseCase = get(),
             runAiActionUseCase = get(),
+            continueAiChatUseCase = get(),
             repository = get(),
             alarmScheduler = get(),
             widgetUpdater = get(),

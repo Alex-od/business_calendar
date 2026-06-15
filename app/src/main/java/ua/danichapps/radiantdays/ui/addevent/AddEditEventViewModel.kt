@@ -13,12 +13,15 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import ua.danichapps.radiantdays.domain.model.AiChatMessage
+import ua.danichapps.radiantdays.domain.model.AiChatRole
 import ua.danichapps.radiantdays.domain.model.AiNoteContext
 import ua.danichapps.radiantdays.domain.model.CalendarEvent
 import ua.danichapps.radiantdays.domain.model.onError
 import ua.danichapps.radiantdays.domain.model.onSuccess
 import ua.danichapps.radiantdays.domain.repository.CalendarEventRepository
 import ua.danichapps.radiantdays.domain.usecase.AddEventUseCase
+import ua.danichapps.radiantdays.domain.usecase.ContinueAiChatUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetTagsUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetVisibleAiActionsUseCase
 import ua.danichapps.radiantdays.domain.usecase.RunAiActionUseCase
@@ -38,6 +41,7 @@ class AddEditEventViewModel(
     private val getTagsUseCase: GetTagsUseCase,
     private val getVisibleAiActionsUseCase: GetVisibleAiActionsUseCase,
     private val runAiActionUseCase: RunAiActionUseCase,
+    private val continueAiChatUseCase: ContinueAiChatUseCase,
     private val repository: CalendarEventRepository,
     private val alarmScheduler: AlarmScheduler,
     private val widgetUpdater: CalendarWidgetUpdater,
@@ -85,7 +89,16 @@ class AddEditEventViewModel(
             )
             runAiActionUseCase(actionGuid, context)
                 .onSuccess { result ->
-                    _uiState.update { it.copy(aiLoading = false, aiResultText = result) }
+                    _uiState.update {
+                        it.copy(
+                            aiLoading = false,
+                            aiResultText = result.response,
+                            aiChatMessages = listOf(
+                                AiChatMessage(AiChatRole.USER, result.resolvedPrompt),
+                                AiChatMessage(AiChatRole.ASSISTANT, result.response),
+                            ),
+                        )
+                    }
                 }
                 .onError { _, message ->
                     _uiState.update { it.copy(aiLoading = false) }
@@ -95,7 +108,86 @@ class AddEditEventViewModel(
     }
 
     fun onAiResultDismiss() {
+        _uiState.update { it.copy(aiResultText = null, aiChatMessages = emptyList()) }
+    }
+
+    fun onAiResultContinueChat() {
+        if (_uiState.value.aiChatMessages.isEmpty()) return
         _uiState.update { it.copy(aiResultText = null) }
+        viewModelScope.launch {
+            _events.send(AddEditEventUiEvent.NavigateToAiChat)
+        }
+    }
+
+    fun onAiChatDismiss() {
+        _uiState.update { it.copy(aiChatMessages = emptyList(), aiChatLoading = false) }
+        viewModelScope.launch {
+            _events.send(AddEditEventUiEvent.NavigateBackFromAiChat)
+        }
+    }
+
+    fun onAiChatSend(message: String) {
+        val trimmed = message.trim()
+        if (trimmed.isBlank() || _uiState.value.aiChatLoading) return
+
+        val history = _uiState.value.aiChatMessages
+        val userMessage = AiChatMessage(AiChatRole.USER, trimmed)
+        _uiState.update {
+            it.copy(
+                aiChatMessages = history + userMessage,
+                aiChatLoading = true,
+            )
+        }
+
+        viewModelScope.launch {
+            continueAiChatUseCase(history, trimmed)
+                .onSuccess { response ->
+                    _uiState.update { state ->
+                        state.copy(
+                            aiChatLoading = false,
+                            aiChatMessages = state.aiChatMessages +
+                                AiChatMessage(AiChatRole.ASSISTANT, response),
+                        )
+                    }
+                }
+                .onError { _, errorMessage ->
+                    _uiState.update { state ->
+                        state.copy(
+                            aiChatLoading = false,
+                            aiChatMessages = state.aiChatMessages.dropLast(1),
+                        )
+                    }
+                    _events.send(AddEditEventUiEvent.ShowError(errorMessage))
+                }
+        }
+    }
+
+    fun onAiChatReplace() {
+        val result = latestAssistantMessage() ?: return
+        applyDiscreteDescriptionChange(result)
+        clearAiChatAndNavigateBack()
+    }
+
+    fun onAiChatAppend() {
+        val result = latestAssistantMessage() ?: return
+        val current = _uiState.value.description
+        val separator = when {
+            current.isBlank() -> ""
+            current.endsWith(' ') || current.endsWith('\n') -> ""
+            else -> " "
+        }
+        applyDiscreteDescriptionChange(current + separator + result)
+        clearAiChatAndNavigateBack()
+    }
+
+    private fun latestAssistantMessage(): String? =
+        _uiState.value.aiChatMessages.lastOrNull { it.role == AiChatRole.ASSISTANT }?.content
+
+    private fun clearAiChatAndNavigateBack() {
+        _uiState.update { it.copy(aiChatMessages = emptyList(), aiChatLoading = false) }
+        viewModelScope.launch {
+            _events.send(AddEditEventUiEvent.NavigateBackFromAiChat)
+        }
     }
 
     fun onAiResultReplace() {

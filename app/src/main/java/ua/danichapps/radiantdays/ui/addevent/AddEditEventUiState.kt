@@ -1,6 +1,7 @@
 package ua.danichapps.radiantdays.ui.addevent
 
 import ua.danichapps.radiantdays.domain.model.AiAction
+import ua.danichapps.radiantdays.domain.model.AiChatMessage
 import ua.danichapps.radiantdays.domain.model.Tag
 
 data class AddEditEventUiState(
@@ -27,6 +28,8 @@ data class AddEditEventUiState(
     val aiSheetVisible: Boolean = false,
     val aiLoading: Boolean = false,
     val aiResultText: String? = null,
+    val aiChatMessages: List<AiChatMessage> = emptyList(),
+    val aiChatLoading: Boolean = false,
 
     val canUndoDescription: Boolean = false,
 )

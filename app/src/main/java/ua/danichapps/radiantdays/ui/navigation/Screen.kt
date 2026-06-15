@@ -31,4 +31,6 @@ sealed class Screen(val route: String) {
         fun createRoute(tagGuid: String) = "tag_notes/$tagGuid"
         const val ARG_TAG_GUID = "tagGuid"
     }
+
+    data object AiChat : Screen("ai_chat")
 }

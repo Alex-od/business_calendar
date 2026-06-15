@@ -7,6 +7,8 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -75,6 +77,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
@@ -107,6 +110,7 @@ fun AddEditEventScreen(
     onNavigateBack: () -> Unit,
     onOpenTags: () -> Unit,
     onOpenAiActions: () -> Unit = {},
+    onOpenAiChat: () -> Unit = {},
     createdTagGuid: String? = null,
     onCreatedTagGuidConsumed: () -> Unit = {},
     viewModel: AddEditEventViewModel = koinViewModel(),
@@ -124,8 +128,10 @@ fun AddEditEventScreen(
         viewModel.events.collect { event ->
             when (event) {
                 is AddEditEventUiEvent.NavigateBack -> onNavigateBack()
+                is AddEditEventUiEvent.NavigateToAiChat -> onOpenAiChat()
                 is AddEditEventUiEvent.ShowError    -> snackbarHostState.showSnackbar(event.message)
                 is AddEditEventUiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+                is AddEditEventUiEvent.NavigateBackFromAiChat -> Unit
             }
         }
     }
@@ -231,11 +237,41 @@ fun AddEditEventScreen(
     }
 
     uiState.aiResultText?.let { resultText ->
-        AlertDialog(
-            onDismissRequest = viewModel::onAiResultDismiss,
-            title = { Text("Результат AI") },
-            text = {
-                val maxTextHeight = (LocalConfiguration.current.screenHeightDp * 0.70f).dp
+        AiResultDialog(
+            resultText = resultText,
+            onContinueChat = viewModel::onAiResultContinueChat,
+            onReplace = viewModel::onAiResultReplace,
+            onAppend = viewModel::onAiResultAppend,
+            onDismiss = viewModel::onAiResultDismiss,
+        )
+    }
+}
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AiResultDialog(
+    resultText: String,
+    onContinueChat: () -> Unit,
+    onReplace: () -> Unit,
+    onAppend: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = MaterialTheme.shapes.extraLarge,
+            tonalElevation = 6.dp,
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+            ) {
+                Text(
+                    text = "Результат AI",
+                    style = MaterialTheme.typography.headlineSmall,
+                )
+                Spacer(Modifier.height(16.dp))
+                val maxTextHeight = (LocalConfiguration.current.screenHeightDp * 0.50f).dp
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -247,23 +283,26 @@ fun AddEditEventScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = viewModel::onAiResultReplace) {
-                    Text("Заменить")
-                }
-            },
-            dismissButton = {
-                Row {
-                    TextButton(onClick = viewModel::onAiResultAppend) {
+                Spacer(Modifier.height(16.dp))
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    TextButton(onClick = onContinueChat) {
+                        Text("Продолжить чат")
+                    }
+                    TextButton(onClick = onReplace) {
+                        Text("Заменить")
+                    }
+                    TextButton(onClick = onAppend) {
                         Text("Добавить")
                     }
-                    TextButton(onClick = viewModel::onAiResultDismiss) {
+                    TextButton(onClick = onDismiss) {
                         Text("Отмена")
                     }
                 }
-            },
-        )
+            }
+        }
     }
 }
 

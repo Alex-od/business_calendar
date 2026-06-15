@@ -7,6 +7,8 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import ua.danichapps.radiantdays.domain.model.AiChatMessage
+import ua.danichapps.radiantdays.domain.model.AiChatRole
 import ua.danichapps.radiantdays.domain.model.DomainResult
 import ua.danichapps.radiantdays.domain.repository.AiCompletionClient
 import java.io.IOException
@@ -14,22 +16,25 @@ import java.net.SocketTimeoutException
 
 class OpenAiCompletionClient(
     private val apiKey: String,
+    private val model: String,
     private val okHttpClient: OkHttpClient,
 ) : AiCompletionClient {
 
-    override suspend fun complete(resolvedPrompt: String): DomainResult<String> =
+    override suspend fun completeConversation(messages: List<AiChatMessage>): DomainResult<String> =
         withContext(Dispatchers.IO) {
             runCatching {
-                val body = JSONObject()
-                    .put("model", MODEL)
-                    .put(
-                        "messages",
-                        org.json.JSONArray().put(
-                            JSONObject()
-                                .put("role", "user")
-                                .put("content", resolvedPrompt),
-                        ),
+                val messagesArray = org.json.JSONArray()
+                for (message in messages) {
+                    messagesArray.put(
+                        JSONObject()
+                            .put("role", message.role.toApiRole())
+                            .put("content", message.content),
                     )
+                }
+
+                val body = JSONObject()
+                    .put("model", model)
+                    .put("messages", messagesArray)
                     .toString()
 
                 val request = Request.Builder()
@@ -70,6 +75,11 @@ class OpenAiCompletionClient(
             )
         }
 
+    private fun AiChatRole.toApiRole(): String = when (this) {
+        AiChatRole.USER -> "user"
+        AiChatRole.ASSISTANT -> "assistant"
+    }
+
     private fun mapAiRequestError(throwable: Throwable): String {
         if (throwable is SocketTimeoutException || throwable.cause is SocketTimeoutException) {
             return "Превышено время ожидания ответа AI (${AI_HTTP_READ_TIMEOUT_SECONDS} с). Попробуйте ещё раз"
@@ -84,7 +94,6 @@ class OpenAiCompletionClient(
 
     private companion object {
         const val API_URL = "https://api.openai.com/v1/chat/completions"
-        const val MODEL = "gpt-4o-mini"
         val JSON_MEDIA_TYPE = "application/json".toMediaType()
     }
 }

@@ -16,6 +16,7 @@ import ua.danichapps.radiantdays.domain.usecase.GetUpcomingEventsUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetTagsUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetVisibleAiActionsUseCase
 import ua.danichapps.radiantdays.domain.usecase.ReorderAiActionsUseCase
+import ua.danichapps.radiantdays.domain.usecase.ContinueAiChatUseCase
 import ua.danichapps.radiantdays.domain.usecase.RunAiActionUseCase
 import ua.danichapps.radiantdays.domain.usecase.UpdateAiActionUseCase
 import ua.danichapps.radiantdays.domain.usecase.UpdateEventUseCase
@@ -41,4 +42,5 @@ val domainModule = module {
     factory { DeleteAiActionUseCase(get()) }
     factory { ReorderAiActionsUseCase(get()) }
     factory { RunAiActionUseCase(get(), get()) }
+    factory { ContinueAiChatUseCase(get()) }
 }

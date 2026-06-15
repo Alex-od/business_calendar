@@ -13,6 +13,14 @@ class RadiantAiCompletionClientProvider(
 
     override fun getClient(): AiCompletionClient {
         val key = keyStore.getKey()?.trim().orEmpty()
-        return if (key.isBlank()) stub else OpenAiCompletionClient(key, okHttpClient)
+        return if (key.isBlank()) {
+            stub
+        } else {
+            OpenAiCompletionClient(
+                apiKey = key,
+                model = keyStore.getModelId(),
+                okHttpClient = okHttpClient,
+            )
+        }
     }
 }

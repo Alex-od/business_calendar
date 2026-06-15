@@ -15,4 +15,10 @@ sealed interface AddEditEventUiEvent {
 
     /** Show an info snack-bar with [message]. */
     data class ShowSnackbar(val message: String) : AddEditEventUiEvent
+
+    /** Navigate to AI chat screen. */
+    data object NavigateToAiChat : AddEditEventUiEvent
+
+    /** Navigate back from AI chat screen. */
+    data object NavigateBackFromAiChat : AddEditEventUiEvent
 }
