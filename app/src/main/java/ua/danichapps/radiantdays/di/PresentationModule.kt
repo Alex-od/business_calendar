@@ -1,9 +1,9 @@
 package ua.danichapps.radiantdays.di
 
-import okhttp3.OkHttpClient
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 import ua.danichapps.radiantdays.ai.AiApiKeyStore
+import ua.danichapps.radiantdays.ai.createAiOkHttpClient
 import ua.danichapps.radiantdays.ai.RadiantAiCompletionClientProvider
 import ua.danichapps.radiantdays.domain.repository.AiCompletionClientProvider
 import ua.danichapps.radiantdays.notification.AlarmScheduler
@@ -80,7 +80,7 @@ val presentationModule = module {
     single { CalendarWidgetUpdater(get()) }
     single { EventNotificationManager(get()) }
     single { AlarmScheduler(get(), get()) }
-    single { OkHttpClient() }
+    single { createAiOkHttpClient() }
     single { AiApiKeyStore(get()) }
     single<AiCompletionClientProvider> {
         RadiantAiCompletionClientProvider(keyStore = get(), okHttpClient = get())

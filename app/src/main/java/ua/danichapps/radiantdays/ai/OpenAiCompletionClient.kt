@@ -9,6 +9,8 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import ua.danichapps.radiantdays.domain.model.DomainResult
 import ua.danichapps.radiantdays.domain.repository.AiCompletionClient
+import java.io.IOException
+import java.net.SocketTimeoutException
 
 class OpenAiCompletionClient(
     private val apiKey: String,
@@ -62,11 +64,21 @@ class OpenAiCompletionClient(
                 onFailure = { throwable ->
                     DomainResult.Error(
                         throwable,
-                        throwable.message ?: "Не удалось выполнить AI-запрос",
+                        mapAiRequestError(throwable),
                     )
                 },
             )
         }
+
+    private fun mapAiRequestError(throwable: Throwable): String {
+        if (throwable is SocketTimeoutException || throwable.cause is SocketTimeoutException) {
+            return "Превышено время ожидания ответа AI (${AI_HTTP_READ_TIMEOUT_SECONDS} с). Попробуйте ещё раз"
+        }
+        if (throwable is IOException && throwable.message.orEmpty().contains("timeout", ignoreCase = true)) {
+            return "Превышено время ожидания ответа AI (${AI_HTTP_READ_TIMEOUT_SECONDS} с). Попробуйте ещё раз"
+        }
+        return throwable.message ?: "Не удалось выполнить AI-запрос"
+    }
 
     private class OpenAiException(message: String) : Exception(message)
 
