@@ -30,6 +30,19 @@ class SettingsViewModel(
         _uiState.update { it.copy(apiKeyInput = value) }
     }
 
+    fun onToggleApiKeySection() {
+        _uiState.update { it.copy(isApiKeySectionExpanded = !it.isApiKeySectionExpanded) }
+    }
+
+    fun onModelSelected(id: String) {
+        if (id == _uiState.value.selectedModelId) return
+        apiKeyStore.saveModelId(id)
+        _uiState.update { it.copy(selectedModelId = apiKeyStore.getModelId()) }
+        viewModelScope.launch {
+            _events.send(SettingsUiEvent.ShowSnackbar("Модель изменена"))
+        }
+    }
+
     fun saveApiKey() {
         val key = _uiState.value.apiKeyInput.trim()
         if (key.isBlank()) {
@@ -44,6 +57,7 @@ class SettingsViewModel(
                 apiKeyInput = "",
                 isKeySaved = true,
                 statusMessage = "OpenAI подключён",
+                isApiKeySectionExpanded = false,
             )
         }
         viewModelScope.launch {
@@ -58,6 +72,7 @@ class SettingsViewModel(
                 apiKeyInput = "",
                 isKeySaved = false,
                 statusMessage = "AI работает в режиме заглушки",
+                isApiKeySectionExpanded = false,
             )
         }
         viewModelScope.launch {
@@ -72,6 +87,7 @@ class SettingsViewModel(
                 apiKeyInput = "",
                 isKeySaved = saved,
                 statusMessage = if (saved) "OpenAI подключён" else "AI работает в режиме заглушки",
+                selectedModelId = apiKeyStore.getModelId(),
             )
         }
     }

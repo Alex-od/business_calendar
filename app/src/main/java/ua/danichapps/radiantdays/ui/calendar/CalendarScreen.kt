@@ -26,12 +26,10 @@ import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -45,9 +43,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -89,7 +85,6 @@ fun CalendarScreen(
     onAddEvent: (Long) -> Unit,
     onEditEvent: (Long) -> Unit,
     onOpenSettings: () -> Unit,
-    onOpenTags: () -> Unit,
     viewModel: CalendarViewModel = koinViewModel(),
 ) {
     // FIX #3: collectAsStateWithLifecycle stops collection when the screen is not visible
@@ -107,10 +102,7 @@ fun CalendarScreen(
 
     Scaffold(
         topBar = {
-            CalendarTopBar(
-                onOpenSettings = onOpenSettings,
-                onOpenTags = onOpenTags,
-            )
+            CalendarTopBar(onOpenSettings = onOpenSettings)
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
@@ -170,34 +162,12 @@ fun CalendarScreen(
 @Composable
 private fun CalendarTopBar(
     onOpenSettings: () -> Unit,
-    onOpenTags: () -> Unit,
 ) {
-    var isMenuExpanded by remember { mutableStateOf(false) }
-
     TopAppBar(
         title = {},
         actions = {
-            IconButton(onClick = { isMenuExpanded = true }) {
-                Icon(Icons.Default.MoreVert, contentDescription = "Open menu")
-            }
-            DropdownMenu(
-                expanded = isMenuExpanded,
-                onDismissRequest = { isMenuExpanded = false },
-            ) {
-                DropdownMenuItem(
-                    text = { Text("Settings") },
-                    onClick = {
-                        isMenuExpanded = false
-                        onOpenSettings()
-                    },
-                )
-                DropdownMenuItem(
-                    text = { Text("Теги") },
-                    onClick = {
-                        isMenuExpanded = false
-                        onOpenTags()
-                    },
-                )
+            IconButton(onClick = onOpenSettings) {
+                Icon(Icons.Default.Settings, contentDescription = "Настройки")
             }
         },
     )

@@ -18,8 +18,16 @@ class AiApiKeyStore(context: Context) {
 
     fun hasKey(): Boolean = !getKey().isNullOrBlank()
 
+    fun getModelId(): String = AiModels.resolveId(prefs.getString(KEY_MODEL_ID, null))
+
+    fun saveModelId(id: String) {
+        if (AiModels.findById(id) == null) return
+        prefs.edit().putString(KEY_MODEL_ID, id).apply()
+    }
+
     private companion object {
         const val PREFS_NAME = "ai_prefs"
         const val KEY_OPENAI_API = "openai_api_key"
+        const val KEY_MODEL_ID = "openai_model_id"
     }
 }
