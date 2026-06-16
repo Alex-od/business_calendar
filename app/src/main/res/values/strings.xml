@@ -1,3 +1,167 @@
 <resources>
     <string name="app_name">My Notes</string>
+
+    <!-- Languages -->
+    <string name="language_system">System</string>
+    <string name="language_russian">Russian</string>
+    <string name="language_ukrainian">Ukrainian</string>
+    <string name="language_english">English</string>
+
+    <!-- Common -->
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_add">Add</string>
+    <string name="action_replace">Replace</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_configure">Configure</string>
+    <string name="action_back">Back</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_send">Send</string>
+    <string name="action_undo">Undo</string>
+    <string name="action_pin">Pin</string>
+    <string name="action_drag">Drag</string>
+    <string name="action_more">More</string>
+
+    <!-- Calendar -->
+    <string name="calendar_add_event">Add event</string>
+    <string name="calendar_settings">Settings</string>
+    <string name="calendar_previous_month">Previous month</string>
+    <string name="calendar_next_month">Next month</string>
+    <string name="calendar_no_events">No events for this day</string>
+    <string name="calendar_all_day">All day</string>
+    <string name="calendar_delete_event">Delete event</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_section_language">Language</string>
+    <string name="settings_language_summary">App display language</string>
+    <string name="settings_section_ai">Artificial intelligence</string>
+    <string name="settings_section_organization">Organization</string>
+    <string name="settings_tags">Tags</string>
+    <string name="settings_tags_summary">Tag colors and names</string>
+    <string name="settings_openai_api_key">OpenAI API Key</string>
+    <string name="settings_api_key_hint">Key from platform.openai.com/api-keys</string>
+    <string name="settings_api_connected">Connected</string>
+    <string name="settings_api_stub">Stub</string>
+    <string name="settings_ai_actions">AI actions</string>
+    <string name="settings_ai_actions_summary">Prompts and action order</string>
+    <string name="settings_model">Model</string>
+    <string name="settings_selected_model">Selected model</string>
+    <string name="settings_snackbar_model_changed">Model changed</string>
+    <string name="settings_snackbar_enter_api_key">Enter API key</string>
+    <string name="settings_snackbar_key_saved">Key saved</string>
+    <string name="settings_snackbar_key_removed">Key removed</string>
+    <string name="settings_ai_status_connected">OpenAI connected</string>
+    <string name="settings_ai_status_stub">AI is running in stub mode</string>
+
+    <!-- Tags -->
+    <string name="tag_settings_title">Tags</string>
+    <string name="tag_add">Add tag</string>
+    <string name="tag_edit">Edit tag</string>
+    <string name="tag_name_label">Enter tag name</string>
+    <string name="tag_color">Color</string>
+    <string name="tag_untagged">Untagged</string>
+
+    <!-- Tag notes -->
+    <string name="tag_notes_empty">No notes for this tag yet</string>
+    <string name="tag_notes_created">Created: %1$s</string>
+    <string name="tag_notes_updated">Updated: %1$s</string>
+
+    <!-- Add / edit event -->
+    <string name="event_voice_unavailable">Voice input is not available on this device</string>
+    <string name="event_voice_input">Voice input</string>
+    <string name="event_voice_prompt">Speak…</string>
+    <string name="event_ai_result_title">AI result</string>
+    <string name="event_continue_chat">Continue chat</string>
+    <string name="event_reminder">Reminder</string>
+    <string name="event_reminder_push">Push: %1$s %2$s</string>
+    <string name="event_quick_pick">Quick pick</string>
+    <string name="event_preset_15_min">+15 min</string>
+    <string name="event_preset_1_hour">+1 h</string>
+    <string name="event_preset_tomorrow_9">Tomorrow 9:00</string>
+    <string name="event_preset_note_day_9">Note day 9:00</string>
+    <string name="event_minutes_before">Minutes before reminder</string>
+    <string name="event_on_time">On time</string>
+    <string name="event_minutes_short">%1$d min</string>
+    <string name="event_completed">Completed</string>
+    <string name="event_alarm_time_title">Alarm time</string>
+    <string name="event_add_alarm">Add alarm</string>
+    <string name="event_remove_alarm">Remove alarm</string>
+    <string name="event_ai_actions">AI actions</string>
+    <string name="event_no_actions">No actions</string>
+
+    <!-- AI actions -->
+    <string name="ai_actions_title">AI actions</string>
+    <string name="ai_action_add">Add action</string>
+    <string name="ai_action_edit">Edit action</string>
+    <string name="ai_action_name">Name</string>
+    <string name="ai_action_description_optional">Description (optional)</string>
+    <string name="ai_action_prompt">AI instruction</string>
+    <string name="ai_action_prompt_hint">Write what AI should do with the note.</string>
+    <string name="ai_action_insert_from_note">Insert from note:</string>
+    <string name="ai_action_token_text">Note text</string>
+    <string name="ai_action_token_title">Title</string>
+    <string name="ai_action_token_tags">Tags</string>
+    <string name="ai_action_token_date">Date</string>
+    <string name="ai_action_show_in_menu">Show in menu</string>
+    <string name="ai_action_name_required_local">Enter action name</string>
+    <string name="ai_action_prompt_required_local">Enter AI instruction</string>
+
+    <!-- AI chat -->
+    <string name="ai_chat_title">AI chat</string>
+    <string name="ai_chat_message">Message</string>
+    <string name="ai_chat_you">You</string>
+    <string name="ai_chat_assistant">AI</string>
+
+    <!-- Note format toolbar -->
+    <string name="note_format_bold">Bold</string>
+    <string name="note_format_list">List</string>
+
+    <!-- AI models -->
+    <string name="ai_model_nano_desc">Fast and economical</string>
+    <string name="ai_model_mini_desc">Balance of speed and quality</string>
+    <string name="ai_model_full_desc">Maximum quality</string>
+    <string name="ai_stub_response">[AI stub] %1$s</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel_name">Reminders</string>
+    <string name="notification_channel_description">Note reminders</string>
+    <string name="notification_reminder">Reminder: %1$s</string>
+    <string name="notification_snooze_5">+5 min</string>
+    <string name="notification_snooze_10">+10 min</string>
+
+    <!-- Widget -->
+    <string name="widget_reminders">Reminders</string>
+    <string name="widget_no_upcoming">No upcoming</string>
+
+    <!-- Domain errors -->
+    <string name="error_unknown">Something went wrong</string>
+    <string name="error_tag_name_required">Enter tag name</string>
+    <string name="error_tag_name_reserved">Tag name \"%1$s\" is reserved</string>
+    <string name="error_tag_name_taken">A tag with this name already exists</string>
+    <string name="error_tag_cannot_update">This tag cannot be updated</string>
+    <string name="error_tag_cannot_delete">This tag cannot be deleted</string>
+    <string name="error_ai_action_name_required">Enter action name</string>
+    <string name="error_ai_action_prompt_required">Enter AI instruction</string>
+    <string name="error_ai_action_name_taken">An action with this name already exists</string>
+    <string name="error_ai_action_invalid">Invalid AI action</string>
+    <string name="error_ai_action_builtin_delete">Built-in actions cannot be deleted</string>
+    <string name="error_ai_action_order_empty">Action order is empty</string>
+    <string name="error_ai_action_not_found">AI action not found</string>
+    <string name="error_note_text_required">Note text is required</string>
+    <string name="error_chat_message_required">Enter a message</string>
+    <string name="error_event_text_blank">Title or description is required</string>
+    <string name="error_event_end_before_start">End time must be after start time</string>
+    <string name="error_event_unsaved_update">Cannot update an unsaved event</string>
+    <string name="error_load_tags_failed">Failed to load tags</string>
+    <string name="error_load_ai_actions_failed">Failed to load AI actions</string>
+    <string name="error_load_notes_failed">Failed to load notes</string>
+    <string name="error_note_not_found">Note not found</string>
+    <string name="error_ai_invalid_api_key">Invalid API key. Check Settings</string>
+    <string name="error_ai_http_error">OpenAI error %1$d: %2$s</string>
+    <string name="error_ai_empty_response">Empty response from OpenAI</string>
+    <string name="error_ai_timeout">AI response timed out (%1$d s). Try again</string>
+    <string name="error_ai_request_failed">Failed to complete AI request</string>
 </resources>
