@@ -49,7 +49,7 @@ dependencies {
     implementation(project(":domain"))
     implementation(project(":data"))
 
-    // AndroidX core
+    implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.viewmodel.compose)
