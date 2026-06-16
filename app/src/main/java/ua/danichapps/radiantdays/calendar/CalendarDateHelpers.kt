@@ -1,9 +1,13 @@
 package ua.danichapps.radiantdays.calendar
 
+import java.text.DateFormatSymbols
 import java.util.Calendar
+import java.util.Locale
 
-/** Day-of-week header labels. Sunday-first to match [Calendar.DAY_OF_WEEK]. */
-val DAY_LABELS = listOf("Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat")
+fun weekdayLabels(locale: Locale): List<String> {
+    val shortWeekdays = DateFormatSymbols.getInstance(locale).shortWeekdays
+    return (Calendar.SUNDAY..Calendar.SATURDAY).map { day -> shortWeekdays[day] }
+}
 
 sealed interface CalendarDay {
     data object Empty : CalendarDay

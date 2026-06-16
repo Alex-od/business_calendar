@@ -11,9 +11,15 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ua.danichapps.radiantdays.ai.AiApiKeyStore
+import ua.danichapps.radiantdays.locale.AppLocaleManager
+import ua.danichapps.radiantdays.locale.AppLocaleStore
+import ua.danichapps.radiantdays.locale.AppStrings
 
 class SettingsViewModel(
     private val apiKeyStore: AiApiKeyStore,
+    private val localeStore: AppLocaleStore,
+    private val localeManager: AppLocaleManager,
+    private val appStrings: AppStrings,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -39,7 +45,17 @@ class SettingsViewModel(
         apiKeyStore.saveModelId(id)
         _uiState.update { it.copy(selectedModelId = apiKeyStore.getModelId()) }
         viewModelScope.launch {
-            _events.send(SettingsUiEvent.ShowSnackbar("Модель изменена"))
+            _events.send(SettingsUiEvent.ShowSnackbar(appStrings.settingsModelChanged()))
+        }
+    }
+
+    fun onLanguageSelected(tag: String?) {
+        if (tag == _uiState.value.selectedLanguageTag) return
+        localeStore.saveTag(tag)
+        localeManager.apply(tag)
+        _uiState.update { it.copy(selectedLanguageTag = localeStore.getTag()) }
+        viewModelScope.launch {
+            _events.send(SettingsUiEvent.LocaleChanged)
         }
     }
 
@@ -47,7 +63,7 @@ class SettingsViewModel(
         val key = _uiState.value.apiKeyInput.trim()
         if (key.isBlank()) {
             viewModelScope.launch {
-                _events.send(SettingsUiEvent.ShowSnackbar("Введите API-ключ"))
+                _events.send(SettingsUiEvent.ShowSnackbar(appStrings.settingsEnterApiKey()))
             }
             return
         }
@@ -56,12 +72,12 @@ class SettingsViewModel(
             it.copy(
                 apiKeyInput = "",
                 isKeySaved = true,
-                statusMessage = "OpenAI подключён",
+                aiStatus = AiConnectionStatus.CONNECTED,
                 isApiKeySectionExpanded = false,
             )
         }
         viewModelScope.launch {
-            _events.send(SettingsUiEvent.ShowSnackbar("Ключ сохранён"))
+            _events.send(SettingsUiEvent.ShowSnackbar(appStrings.settingsKeySaved()))
         }
     }
 
@@ -71,12 +87,12 @@ class SettingsViewModel(
             it.copy(
                 apiKeyInput = "",
                 isKeySaved = false,
-                statusMessage = "AI работает в режиме заглушки",
+                aiStatus = AiConnectionStatus.STUB,
                 isApiKeySectionExpanded = false,
             )
         }
         viewModelScope.launch {
-            _events.send(SettingsUiEvent.ShowSnackbar("Ключ удалён"))
+            _events.send(SettingsUiEvent.ShowSnackbar(appStrings.settingsKeyRemoved()))
         }
     }
 
@@ -86,9 +102,15 @@ class SettingsViewModel(
             it.copy(
                 apiKeyInput = "",
                 isKeySaved = saved,
-                statusMessage = if (saved) "OpenAI подключён" else "AI работает в режиме заглушки",
+                aiStatus = if (saved) AiConnectionStatus.CONNECTED else AiConnectionStatus.STUB,
                 selectedModelId = apiKeyStore.getModelId(),
+                selectedLanguageTag = localeStore.getTag(),
             )
         }
     }
+}
+
+enum class AiConnectionStatus {
+    STUB,
+    CONNECTED,
 }

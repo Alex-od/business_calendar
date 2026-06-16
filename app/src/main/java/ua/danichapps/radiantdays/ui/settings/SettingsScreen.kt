@@ -43,13 +43,17 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import android.app.Activity
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
+import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.ai.AiModelOption
 import ua.danichapps.radiantdays.ai.AiModels
 
@@ -63,11 +67,13 @@ fun SettingsScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val activity = LocalContext.current as? Activity
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
                 is SettingsUiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+                is SettingsUiEvent.LocaleChanged -> activity?.recreate()
             }
         }
     }
@@ -75,10 +81,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Настройки") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -93,14 +99,28 @@ fun SettingsScreen(
         ) {
             item {
                 Text(
-                    text = "Искусственный интеллект",
+                    text = stringResource(R.string.settings_section_language),
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                )
+            }
+            item {
+                AppLanguageSelector(
+                    selectedTag = uiState.selectedLanguageTag,
+                    onLanguageSelected = viewModel::onLanguageSelected,
+                )
+            }
+            item {
+                Spacer(Modifier.height(24.dp))
+                Text(
+                    text = stringResource(R.string.settings_section_ai),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 )
             }
             item {
                 AiSettingsCard(
-                    statusMessage = uiState.statusMessage,
+                    aiStatus = uiState.aiStatus,
                     isKeySaved = uiState.isKeySaved,
                     isApiKeySectionExpanded = uiState.isApiKeySectionExpanded,
                     apiKeyInput = uiState.apiKeyInput,
@@ -118,15 +138,15 @@ fun SettingsScreen(
             item {
                 Spacer(Modifier.height(24.dp))
                 Text(
-                    text = "Организация",
+                    text = stringResource(R.string.settings_section_organization),
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                 )
             }
             item {
                 SettingsNavigationItem(
-                    headline = "Теги",
-                    supporting = "Цвета и названия тегов",
+                    headline = stringResource(R.string.settings_tags),
+                    supporting = stringResource(R.string.settings_tags_summary),
                     icon = Icons.AutoMirrored.Filled.Label,
                     onClick = onOpenTags,
                 )
@@ -138,7 +158,7 @@ fun SettingsScreen(
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AiSettingsCard(
-    statusMessage: String,
+    aiStatus: AiConnectionStatus,
     isKeySaved: Boolean,
     isApiKeySectionExpanded: Boolean,
     apiKeyInput: String,
@@ -152,6 +172,11 @@ private fun AiSettingsCard(
     onModelSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val statusMessage = when (aiStatus) {
+        AiConnectionStatus.CONNECTED -> stringResource(R.string.settings_ai_status_connected)
+        AiConnectionStatus.STUB -> stringResource(R.string.settings_ai_status_stub)
+    }
+
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(
@@ -161,7 +186,7 @@ private fun AiSettingsCard(
         Column {
             ListItem(
                 modifier = Modifier.clickable(onClick = onToggleApiKeySection),
-                headlineContent = { Text("OpenAI API Key") },
+                headlineContent = { Text(stringResource(R.string.settings_openai_api_key)) },
                 supportingContent = { Text(statusMessage) },
                 leadingContent = {
                     Icon(
@@ -175,7 +200,13 @@ private fun AiSettingsCard(
                         AssistChip(
                             onClick = {},
                             label = {
-                                Text(if (isKeySaved) "Подключён" else "Заглушка")
+                                Text(
+                                    if (isKeySaved) {
+                                        stringResource(R.string.settings_api_connected)
+                                    } else {
+                                        stringResource(R.string.settings_api_stub)
+                                    },
+                                )
                             },
                             enabled = false,
                         )
@@ -194,9 +225,9 @@ private fun AiSettingsCard(
                     OutlinedTextField(
                         value = apiKeyInput,
                         onValueChange = onApiKeyChange,
-                        label = { Text("OpenAI API Key") },
+                        label = { Text(stringResource(R.string.settings_openai_api_key)) },
                         supportingText = {
-                            Text("Ключ с platform.openai.com/api-keys")
+                            Text(stringResource(R.string.settings_api_key_hint))
                         },
                         visualTransformation = PasswordVisualTransformation(),
                         singleLine = true,
@@ -205,10 +236,10 @@ private fun AiSettingsCard(
                     Spacer(Modifier.height(8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Button(onClick = onSaveApiKey) {
-                            Text("Сохранить")
+                            Text(stringResource(R.string.action_save))
                         }
                         TextButton(onClick = onClearApiKey) {
-                            Text("Очистить")
+                            Text(stringResource(R.string.action_clear))
                         }
                     }
                     Spacer(Modifier.height(8.dp))
@@ -223,8 +254,8 @@ private fun AiSettingsCard(
             HorizontalDivider()
             ListItem(
                 modifier = Modifier.clickable(onClick = onOpenAiActions),
-                headlineContent = { Text("AI-действия") },
-                supportingContent = { Text("Промпты и порядок действий") },
+                headlineContent = { Text(stringResource(R.string.settings_ai_actions)) },
+                supportingContent = { Text(stringResource(R.string.settings_ai_actions_summary)) },
                 leadingContent = {
                     Icon(
                         Icons.Default.AutoAwesome,
@@ -255,8 +286,8 @@ private fun AiModelSelector(
     var expanded by remember { mutableStateOf(false) }
 
     ListItem(
-        headlineContent = { Text("Модель") },
-        supportingContent = { Text(selectedModel.description) },
+        headlineContent = { Text(stringResource(R.string.settings_model)) },
+        supportingContent = { Text(stringResource(selectedModel.descriptionRes)) },
         leadingContent = {
             Icon(
                 Icons.Default.SmartToy,
@@ -277,7 +308,7 @@ private fun AiModelSelector(
             value = selectedModel.displayName,
             onValueChange = {},
             readOnly = true,
-            label = { Text("Выбранная модель") },
+            label = { Text(stringResource(R.string.settings_selected_model)) },
             trailingIcon = {
                 ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
             },
@@ -296,7 +327,7 @@ private fun AiModelSelector(
                         Column {
                             Text(model.displayName)
                             Text(
-                                text = model.description,
+                                text = stringResource(model.descriptionRes),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )

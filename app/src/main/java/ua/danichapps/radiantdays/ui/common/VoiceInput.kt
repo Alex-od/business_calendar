@@ -14,6 +14,8 @@ import java.util.Locale
 
 @Composable
 fun rememberVoiceInputLauncher(
+    locale: Locale,
+    prompt: String,
     onResult: (String) -> Unit,
     onUnavailable: () -> Unit = {},
 ): () -> Unit {
@@ -28,15 +30,15 @@ fun rememberVoiceInputLauncher(
             .orEmpty()
         if (text.isNotBlank()) onResult(text)
     }
-    return remember(launcher, onResult, onUnavailable) {
+    return remember(launcher, locale, prompt, onResult, onUnavailable) {
         {
             val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                 putExtra(
                     RecognizerIntent.EXTRA_LANGUAGE_MODEL,
                     RecognizerIntent.LANGUAGE_MODEL_FREE_FORM,
                 )
-                putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.getDefault())
-                putExtra(RecognizerIntent.EXTRA_PROMPT, "Говорите...")
+                putExtra(RecognizerIntent.EXTRA_LANGUAGE, locale.toLanguageTag())
+                putExtra(RecognizerIntent.EXTRA_PROMPT, prompt)
             }
             if (intent.resolveActivity(context.packageManager) != null) {
                 launcher.launch(intent)

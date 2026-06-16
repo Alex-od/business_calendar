@@ -11,12 +11,14 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.model.Tag
 import ua.danichapps.radiantdays.domain.model.onError
 import ua.danichapps.radiantdays.domain.model.onSuccess
 import ua.danichapps.radiantdays.domain.usecase.DeleteEventUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetEventsByTagUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetTagsUseCase
+import ua.danichapps.radiantdays.locale.DomainErrorStrings
 import ua.danichapps.radiantdays.notification.AlarmScheduler
 import ua.danichapps.radiantdays.widget.CalendarWidgetUpdater
 
@@ -27,11 +29,13 @@ class TagNotesViewModel(
     private val deleteEventUseCase: DeleteEventUseCase,
     private val alarmScheduler: AlarmScheduler,
     private val widgetUpdater: CalendarWidgetUpdater,
+    private val errorStrings: DomainErrorStrings,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(
         TagNotesUiState(
             tagName = if (Tag.isUntaggedFilter(tagGuid)) Tag.UNTAGGED_NAME else "",
+            isUntaggedFilter = Tag.isUntaggedFilter(tagGuid),
         ),
     )
     val uiState: StateFlow<TagNotesUiState> = _uiState.asStateFlow()
@@ -53,8 +57,8 @@ class TagNotesViewModel(
                     alarmScheduler.cancel(noteId)
                     widgetUpdater.refresh()
                 }
-                .onError { _, message ->
-                    _events.send(TagNotesUiEvent.ShowError(message))
+                .onError { _, key, args ->
+                    _events.send(TagNotesUiEvent.ShowError(errorStrings.resolve(key, args)))
                 }
         }
     }
@@ -75,11 +79,11 @@ class TagNotesViewModel(
     private fun observeNotes() {
         viewModelScope.launch {
             getEventsByTagUseCase(tagGuid)
-                .catch { throwable ->
+                .catch {
                     _uiState.update { it.copy(isLoading = false) }
                     _events.send(
                         TagNotesUiEvent.ShowError(
-                            throwable.message ?: "Не удалось загрузить заметки",
+                            errorStrings.resolve(MessageKey.LOAD_NOTES_FAILED),
                         ),
                     )
                 }

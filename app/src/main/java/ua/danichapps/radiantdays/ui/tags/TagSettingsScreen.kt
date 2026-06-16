@@ -34,9 +34,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
+import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.domain.model.EventColor
 import ua.danichapps.radiantdays.domain.model.Tag
 import ua.danichapps.radiantdays.ui.common.TagColorDot
@@ -73,10 +75,10 @@ fun TagSettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Теги") },
+                title = { Text(stringResource(R.string.tag_settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -92,7 +94,7 @@ fun TagSettingsScreen(
                     .navigationBarsPadding()
                     .padding(16.dp),
             ) {
-                Text("Добавить тег")
+                Text(stringResource(R.string.tag_add))
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -109,10 +111,10 @@ fun TagSettingsScreen(
 
     if (showAddDialog) {
         TagEditDialog(
-            title = "Добавить тег",
+            title = stringResource(R.string.tag_add),
             initialName = "",
             initialColor = EventColor.DEFAULT,
-            confirmText = "Добавить",
+            confirmText = stringResource(R.string.action_add),
             externalError = uiState.tagNameError,
             onConfirm = viewModel::addTag,
             onInputChange = viewModel::clearAddTagError,
@@ -125,10 +127,10 @@ fun TagSettingsScreen(
 
     uiState.editingTag?.let { tag ->
         TagEditDialog(
-            title = "Редактировать тег",
+            title = stringResource(R.string.tag_edit),
             initialName = tag.name,
             initialColor = tag.color,
-            confirmText = "Сохранить",
+            confirmText = stringResource(R.string.action_save),
             onConfirm = viewModel::updateTag,
             onDismiss = viewModel::dismissEdit,
         )
@@ -195,7 +197,15 @@ private fun TagItem(
         } else {
             { TagColorDot(color = tag.color) }
         },
-        headlineContent = { Text(tag.name) },
+        headlineContent = {
+            Text(
+                if (tag.isUntaggedFilter) {
+                    stringResource(R.string.tag_untagged)
+                } else {
+                    tag.name
+                },
+            )
+        },
         trailingContent = if (tag.isUntaggedFilter) {
             null
         } else {
@@ -206,15 +216,15 @@ private fun TagItem(
                     IconButton(onClick = onTogglePinned) {
                         Icon(
                             Icons.Default.PushPin,
-                            contentDescription = "Закрепить",
+                            contentDescription = stringResource(R.string.action_pin),
                             tint = pinColor,
                         )
                     }
                     IconButton(onClick = onEdit) {
-                        Icon(Icons.Default.Edit, contentDescription = "Редактировать")
+                        Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.action_edit))
                     }
                     IconButton(onClick = onDelete) {
-                        Icon(Icons.Default.Delete, contentDescription = "Удалить")
+                        Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
                     }
                 }
             }

@@ -3,9 +3,13 @@ package ua.danichapps.radiantdays.di
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 import ua.danichapps.radiantdays.ai.AiApiKeyStore
-import ua.danichapps.radiantdays.ai.createAiOkHttpClient
 import ua.danichapps.radiantdays.ai.RadiantAiCompletionClientProvider
+import ua.danichapps.radiantdays.ai.createAiOkHttpClient
 import ua.danichapps.radiantdays.domain.repository.AiCompletionClientProvider
+import ua.danichapps.radiantdays.locale.AppLocaleManager
+import ua.danichapps.radiantdays.locale.AppLocaleStore
+import ua.danichapps.radiantdays.locale.AppStrings
+import ua.danichapps.radiantdays.locale.DomainErrorStrings
 import ua.danichapps.radiantdays.notification.AlarmScheduler
 import ua.danichapps.radiantdays.notification.EventNotificationManager
 import ua.danichapps.radiantdays.sync.DeviceIdProvider
@@ -27,6 +31,7 @@ val presentationModule = module {
             deleteEventUseCase = get(),
             alarmScheduler = get(),
             widgetUpdater = get(),
+            errorStrings = get(),
         )
     }
 
@@ -41,11 +46,18 @@ val presentationModule = module {
             repository = get(),
             alarmScheduler = get(),
             widgetUpdater = get(),
+            errorStrings = get(),
+            localeStore = get(),
         )
     }
 
     viewModel {
-        SettingsViewModel(apiKeyStore = get())
+        SettingsViewModel(
+            apiKeyStore = get(),
+            localeStore = get(),
+            localeManager = get(),
+            appStrings = get(),
+        )
     }
 
     viewModel {
@@ -55,6 +67,7 @@ val presentationModule = module {
             updateAiActionUseCase = get(),
             deleteAiActionUseCase = get(),
             reorderAiActionsUseCase = get(),
+            errorStrings = get(),
         )
     }
 
@@ -64,6 +77,7 @@ val presentationModule = module {
             addTagUseCase = get(),
             updateTagUseCase = get(),
             deleteTagUseCase = get(),
+            errorStrings = get(),
         )
     }
 
@@ -75,6 +89,7 @@ val presentationModule = module {
             deleteEventUseCase = get(),
             alarmScheduler = get(),
             widgetUpdater = get(),
+            errorStrings = get(),
         )
     }
 
@@ -83,8 +98,12 @@ val presentationModule = module {
     single { AlarmScheduler(get(), get()) }
     single { createAiOkHttpClient() }
     single { AiApiKeyStore(get()) }
+    single { AppLocaleStore(get()) }
+    single { AppLocaleManager() }
+    single { DomainErrorStrings(get()) }
+    single { AppStrings(get()) }
     single<AiCompletionClientProvider> {
-        RadiantAiCompletionClientProvider(keyStore = get(), okHttpClient = get())
+        RadiantAiCompletionClientProvider(keyStore = get(), okHttpClient = get(), appStrings = get())
     }
 
     single { DeviceIdProvider(get()) }

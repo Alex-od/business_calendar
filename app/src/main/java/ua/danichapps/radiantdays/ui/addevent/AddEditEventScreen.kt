@@ -74,6 +74,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -81,18 +82,25 @@ import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
+import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.domain.model.AiAction
 import ua.danichapps.radiantdays.domain.model.Tag
+import ua.danichapps.radiantdays.locale.AppLocaleStore
 import kotlinx.coroutines.launch
 import ua.danichapps.radiantdays.ui.common.ColoredTagChip
 import ua.danichapps.radiantdays.ui.common.CompactFilterChip
 import ua.danichapps.radiantdays.ui.common.TagChipSpacing
-import ua.danichapps.radiantdays.ui.common.appendVoiceTextToFieldValue
+import ua.danichapps.radiantdays.ui.common.NoteDisplayStyles
+import ua.danichapps.radiantdays.ui.common.NoteFormatToolbar
+import ua.danichapps.radiantdays.ui.common.appendVoiceTextToRichFieldValue
+import ua.danichapps.radiantdays.ui.common.applyBoldTyping
+import ua.danichapps.radiantdays.ui.common.noteFieldValueToMarkdown
+import ua.danichapps.radiantdays.ui.common.noteMarkdownToFieldValue
 import ua.danichapps.radiantdays.ui.common.rememberVoiceInputLauncher
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
-import java.util.Locale
 
 /**
  * Shared screen for adding a new event and editing an existing one.
@@ -145,6 +153,7 @@ fun AddEditEventScreen(
     BackHandler(onBack = viewModel::onBackClick)
 
     val context = LocalContext.current
+    val voiceUnavailableMessage = stringResource(R.string.event_voice_unavailable)
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission(),
     ) { _ -> viewModel.onAddAlarmClick() }
@@ -173,8 +182,6 @@ fun AddEditEventScreen(
                 onTagToggle = viewModel::onTagToggle,
                 onTagsExpandedToggle = viewModel::onTagsExpandedToggle,
                 onOpenTags = onOpenTags,
-                onAddAlarm = { requestAlarmWithPermission() },
-                onRemoveAlarm = viewModel::onRemoveAlarmClick,
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -198,10 +205,12 @@ fun AddEditEventScreen(
             onAlarmTimeChange = viewModel::onAlarmTimeChange,
             onNotificationMinutesChange = viewModel::onNotificationMinutesChange,
             onIsCompletedChange = viewModel::onIsCompletedChange,
+            onAddAlarm = { requestAlarmWithPermission() },
+            onRemoveAlarm = viewModel::onRemoveAlarmClick,
             onAiClick = viewModel::onAiButtonClick,
             onVoiceInputUnavailable = {
                 scope.launch {
-                    snackbarHostState.showSnackbar("Голосовой ввод недоступен на этом устройстве")
+                    snackbarHostState.showSnackbar(voiceUnavailableMessage)
                 }
             },
             modifier = Modifier.padding(padding),
@@ -267,7 +276,7 @@ private fun AiResultDialog(
                     .padding(24.dp),
             ) {
                 Text(
-                    text = "Результат AI",
+                    text = stringResource(R.string.event_ai_result_title),
                     style = MaterialTheme.typography.headlineSmall,
                 )
                 Spacer(Modifier.height(16.dp))
@@ -289,16 +298,16 @@ private fun AiResultDialog(
                     horizontalArrangement = Arrangement.End,
                 ) {
                     TextButton(onClick = onContinueChat) {
-                        Text("Продолжить чат")
+                        Text(stringResource(R.string.event_continue_chat))
                     }
                     TextButton(onClick = onReplace) {
-                        Text("Заменить")
+                        Text(stringResource(R.string.action_replace))
                     }
                     TextButton(onClick = onAppend) {
-                        Text("Добавить")
+                        Text(stringResource(R.string.action_add))
                     }
                     TextButton(onClick = onDismiss) {
-                        Text("Отмена")
+                        Text(stringResource(R.string.action_cancel))
                     }
                 }
             }
@@ -327,32 +336,59 @@ private fun EventForm(
     onAlarmTimeChange: (Long) -> Unit,
     onNotificationMinutesChange: (Int) -> Unit,
     onIsCompletedChange: (Boolean) -> Unit,
+    onAddAlarm: () -> Unit,
+    onRemoveAlarm: () -> Unit,
     onAiClick: () -> Unit,
     onVoiceInputUnavailable: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val dateFormat = remember { SimpleDateFormat("dd MMM yyyy", Locale.getDefault()) }
-    val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-    val bodyTextStyle = MaterialTheme.typography.bodyLarge
+    val context = LocalContext.current
+    val localeStore: AppLocaleStore = koinInject()
+    val locale = remember(context) { localeStore.resolveLocale(context) }
+    val dateFormat = remember(locale) { SimpleDateFormat("dd MMM yyyy", locale) }
+    val timeFormat = remember(locale) { SimpleDateFormat("HH:mm", locale) }
+    val typography = MaterialTheme.typography
+    val bodyTextStyle = typography.bodyLarge
+    val noteDisplayStyles = remember(typography) {
+        NoteDisplayStyles(
+            smallSize = typography.bodySmall.fontSize,
+            normalSize = typography.bodyLarge.fontSize,
+            largeSize = typography.titleMedium.fontSize,
+        )
+    }
 
     var showAlarmDatePicker by remember { mutableStateOf(false) }
     var showAlarmTimePicker by remember { mutableStateOf(false) }
+    var boldTyping by remember { mutableStateOf(false) }
 
-    var descriptionValue by remember { mutableStateOf(TextFieldValue(uiState.description)) }
+    var descriptionValue by remember(uiState.editingEventId) {
+        mutableStateOf(noteMarkdownToFieldValue(uiState.description, noteDisplayStyles))
+    }
 
     LaunchedEffect(uiState.description, uiState.editingEventId) {
-        if (uiState.description != descriptionValue.text) {
-            descriptionValue = TextFieldValue(
-                text = uiState.description,
-                selection = TextRange(uiState.description.length),
+        val markdown = noteFieldValueToMarkdown(descriptionValue, noteDisplayStyles)
+        if (uiState.description != markdown) {
+            descriptionValue = noteMarkdownToFieldValue(
+                markdown = uiState.description,
+                styles = noteDisplayStyles,
+                selection = descriptionValue.selection,
             )
+            boldTyping = false
         }
     }
 
+    fun publishDescriptionValue(newValue: TextFieldValue) {
+        descriptionValue = newValue
+        onDescriptionChange(noteFieldValueToMarkdown(newValue, noteDisplayStyles))
+    }
+
+    val voicePrompt = stringResource(R.string.event_voice_prompt)
     val startVoiceInput = rememberVoiceInputLauncher(
+        locale = locale,
+        prompt = voicePrompt,
         onResult = { spoken ->
-            descriptionValue = appendVoiceTextToFieldValue(descriptionValue, spoken)
-            onDescriptionChangeFromVoice(descriptionValue.text)
+            descriptionValue = appendVoiceTextToRichFieldValue(descriptionValue, spoken)
+            onDescriptionChangeFromVoice(noteFieldValueToMarkdown(descriptionValue, noteDisplayStyles))
         },
         onUnavailable = onVoiceInputUnavailable,
     )
@@ -389,25 +425,46 @@ private fun EventForm(
                 onClick = onDescriptionUndo,
                 enabled = uiState.canUndoDescription,
             ) {
-                Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = "Отменить")
+                Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = stringResource(R.string.action_undo))
             }
             Spacer(Modifier.weight(1f))
             IconButton(onClick = startVoiceInput) {
-                Icon(Icons.Default.Mic, contentDescription = "Голосовой ввод")
+                Icon(Icons.Default.Mic, contentDescription = stringResource(R.string.event_voice_input))
+            }
+            if (uiState.alarmTimeMillis == null) {
+                IconButton(onClick = onAddAlarm) {
+                    Icon(Icons.Default.AlarmAdd, contentDescription = stringResource(R.string.event_add_alarm))
+                }
+            } else {
+                IconButton(onClick = onRemoveAlarm) {
+                    Icon(Icons.Default.AlarmOff, contentDescription = stringResource(R.string.event_remove_alarm))
+                }
             }
             IconButton(
                 onClick = onAiClick,
                 enabled = uiState.description.isNotBlank(),
             ) {
-                Icon(Icons.Default.AutoAwesome, contentDescription = "AI")
+                Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.ai_chat_assistant))
             }
         }
+
+        NoteFormatToolbar(
+            value = descriptionValue,
+            onValueChange = ::publishDescriptionValue,
+            styles = noteDisplayStyles,
+            boldTyping = boldTyping,
+            onBoldTypingChange = { boldTyping = it },
+        )
 
         TextField(
             value = descriptionValue,
             onValueChange = { newValue ->
-                descriptionValue = newValue
-                onDescriptionChange(newValue.text)
+                val processed = if (boldTyping) {
+                    applyBoldTyping(descriptionValue, newValue)
+                } else {
+                    newValue
+                }
+                publishDescriptionValue(processed)
             },
             modifier = Modifier
                 .weight(1f)
@@ -440,9 +497,13 @@ private fun EventForm(
                         onAlarmTimeChange(mergeDateIntoMillis(it, alarmTimeMillis))
                     }
                     showAlarmDatePicker = false
-                }) { Text("ОК") }
+                }) { Text(stringResource(R.string.action_ok)) }
             },
-            dismissButton = { TextButton(onClick = { showAlarmDatePicker = false }) { Text("Отмена") } },
+            dismissButton = {
+                TextButton(onClick = { showAlarmDatePicker = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
         ) { DatePicker(alarmDatePickerState) }
     }
 
@@ -458,10 +519,14 @@ private fun EventForm(
                 TextButton(onClick = {
                     onAlarmTimeChange(mergeTimeIntoMillis(alarmTimeMillis, state.hour, state.minute))
                     showAlarmTimePicker = false
-                }) { Text("ОК") }
+                }) { Text(stringResource(R.string.action_ok)) }
             },
-            dismissButton = { TextButton(onClick = { showAlarmTimePicker = false }) { Text("Отмена") } },
-            title = { Text("Время будильника") },
+            dismissButton = {
+                TextButton(onClick = { showAlarmTimePicker = false }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+            title = { Text(stringResource(R.string.event_alarm_time_title)) },
             text = { TimePicker(state) },
         )
     }
@@ -487,9 +552,11 @@ private fun ReminderSection(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Default.Alarm, contentDescription = null)
             Column(Modifier.padding(start = 8.dp)) {
-                Text("Напоминание", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.event_reminder), style = MaterialTheme.typography.titleSmall)
+                val pushDateStr = dateFormat.format(Date(fireMillis))
+                val pushTimeStr = timeFormat.format(Date(fireMillis))
                 Text(
-                    text = "Push: ${dateFormat.format(Date(fireMillis))} ${timeFormat.format(Date(fireMillis))}",
+                    text = stringResource(R.string.event_reminder_push, pushDateStr, pushTimeStr),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -503,45 +570,51 @@ private fun ReminderSection(
                 Text(timeFormat.format(Date(alarmTimeMillis)))
             }
         }
-        Text("Быстрый выбор", style = MaterialTheme.typography.labelMedium)
+        Text(stringResource(R.string.event_quick_pick), style = MaterialTheme.typography.labelMedium)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             item {
                 FilterChip(
                     selected = false,
                     onClick = { onPresetAlarm(millisPlusMinutes(System.currentTimeMillis(), 15)) },
-                    label = { Text("+15 мин") },
+                    label = { Text(stringResource(R.string.event_preset_15_min)) },
                 )
             }
             item {
                 FilterChip(
                     selected = false,
                     onClick = { onPresetAlarm(millisPlusHours(System.currentTimeMillis(), 1)) },
-                    label = { Text("+1 ч") },
+                    label = { Text(stringResource(R.string.event_preset_1_hour)) },
                 )
             }
             item {
                 FilterChip(
                     selected = false,
                     onClick = { onPresetAlarm(tomorrowAtNineMillis()) },
-                    label = { Text("Завтра 9:00") },
+                    label = { Text(stringResource(R.string.event_preset_tomorrow_9)) },
                 )
             }
             item {
                 FilterChip(
                     selected = false,
                     onClick = { onPresetAlarm(noteDayAtNineMillis(startTimeMillis)) },
-                    label = { Text("День заметки 9:00") },
+                    label = { Text(stringResource(R.string.event_preset_note_day_9)) },
                 )
             }
         }
-        Text("За сколько минут до напоминания", style = MaterialTheme.typography.labelMedium)
+        Text(stringResource(R.string.event_minutes_before), style = MaterialTheme.typography.labelMedium)
         LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             items(REMINDER_OFFSET_MINUTES_OPTIONS) { minutes ->
                 FilterChip(
                     selected = notificationMinutesBefore == minutes,
                     onClick = { onNotificationMinutesChange(minutes) },
                     label = {
-                        Text(if (minutes == 0) "В срок" else "$minutes мин")
+                        Text(
+                            if (minutes == 0) {
+                                stringResource(R.string.event_on_time)
+                            } else {
+                                stringResource(R.string.event_minutes_short, minutes)
+                            },
+                        )
                     },
                 )
             }
@@ -551,7 +624,7 @@ private fun ReminderSection(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Checkbox(checked = isCompleted, onCheckedChange = onIsCompletedChange)
-            Text("Выполнено", style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(R.string.event_completed), style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
@@ -564,8 +637,6 @@ private fun TagToolbar(
     onTagToggle: (String) -> Unit,
     onTagsExpandedToggle: () -> Unit,
     onOpenTags: () -> Unit,
-    onAddAlarm: () -> Unit,
-    onRemoveAlarm: () -> Unit,
 ) {
     Surface(
         color = TopAppBarDefaults.topAppBarColors().containerColor,
@@ -579,7 +650,7 @@ private fun TagToolbar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onBackClick) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
             }
             TagQuickAccessSection(
                 modifier = Modifier.weight(1f),
@@ -590,15 +661,6 @@ private fun TagToolbar(
                 onTagsExpandedToggle = onTagsExpandedToggle,
                 onOpenTags = onOpenTags,
             )
-            if (uiState.alarmTimeMillis == null) {
-                IconButton(onClick = onAddAlarm) {
-                    Icon(Icons.Default.AlarmAdd, contentDescription = "Добавить будильник")
-                }
-            } else {
-                IconButton(onClick = onRemoveAlarm) {
-                    Icon(Icons.Default.AlarmOff, contentDescription = "Удалить будильник")
-                }
-            }
         }
     }
 }
@@ -645,7 +707,11 @@ private fun TagQuickAccessSection(
                     key = { tag -> "selected_${tag.guid}" },
                 ) { tag ->
                     ColoredTagChip(
-                        name = tag.name,
+                        name = if (tag.isUntaggedFilter) {
+                            stringResource(R.string.tag_untagged)
+                        } else {
+                            tag.name
+                        },
                         color = tag.color,
                         selected = true,
                         onClick = { onTagToggle(tag.guid) },
@@ -665,7 +731,11 @@ private fun TagQuickAccessSection(
                 key = { tag -> tag.guid },
             ) { tag ->
                 ColoredTagChip(
-                    name = tag.name,
+                    name = if (tag.isUntaggedFilter) {
+                        stringResource(R.string.tag_untagged)
+                    } else {
+                        tag.name
+                    },
                     color = tag.color,
                     selected = false,
                     onClick = { onTagToggle(tag.guid) },
@@ -677,7 +747,11 @@ private fun TagQuickAccessSection(
                     key = { tag -> tag.guid },
                 ) { tag ->
                     ColoredTagChip(
-                        name = tag.name,
+                        name = if (tag.isUntaggedFilter) {
+                            stringResource(R.string.tag_untagged)
+                        } else {
+                            tag.name
+                        },
                         color = tag.color,
                         selected = false,
                         onClick = { onTagToggle(tag.guid) },
@@ -690,7 +764,7 @@ private fun TagQuickAccessSection(
                         CompactFilterChip(
                             selected = tagsExpanded,
                             onClick = onTagsExpandedToggle,
-                            label = { Text("Ещё") },
+                            label = { Text(stringResource(R.string.action_more)) },
                         )
                     }
                     CompactFilterChip(
@@ -732,13 +806,13 @@ private fun AiActionsBottomSheetContent(
 ) {
     Column(Modifier.padding(bottom = 24.dp)) {
         Text(
-            text = "AI-действия",
+            text = stringResource(R.string.event_ai_actions),
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
         )
         if (actions.isEmpty()) {
             Text(
-                text = "Нет действий",
+                text = stringResource(R.string.event_no_actions),
                 modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp),
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -746,7 +820,7 @@ private fun AiActionsBottomSheetContent(
                 onClick = onConfigureClick,
                 modifier = Modifier.padding(horizontal = 16.dp),
             ) {
-                Text("Настроить")
+                Text(stringResource(R.string.action_configure))
             }
         } else {
             LazyColumn {

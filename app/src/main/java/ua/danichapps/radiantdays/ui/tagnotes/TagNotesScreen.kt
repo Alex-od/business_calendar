@@ -36,15 +36,21 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
+import org.koin.compose.koinInject
 import org.koin.core.parameter.parametersOf
+import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.domain.model.CalendarEvent
 import ua.danichapps.radiantdays.domain.model.displayHeadline
+import ua.danichapps.radiantdays.locale.AppLocaleStore
 import ua.danichapps.radiantdays.ui.common.formatNoteDateTime
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +62,9 @@ fun TagNotesScreen(
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    val localeStore: AppLocaleStore = koinInject()
+    val locale = remember(context) { localeStore.resolveLocale(context) }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
@@ -68,10 +77,18 @@ fun TagNotesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(uiState.tagName) },
+                title = {
+                    Text(
+                        if (uiState.isUntaggedFilter) {
+                            stringResource(R.string.tag_untagged)
+                        } else {
+                            uiState.tagName
+                        },
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -80,6 +97,7 @@ fun TagNotesScreen(
     ) { padding ->
         TagNotesContent(
             uiState = uiState,
+            locale = locale,
             onEditNote = onEditNote,
             onDeleteNote = viewModel::deleteNote,
             modifier = Modifier.padding(padding),
@@ -90,6 +108,7 @@ fun TagNotesScreen(
 @Composable
 private fun TagNotesContent(
     uiState: TagNotesUiState,
+    locale: Locale,
     onEditNote: (Long) -> Unit,
     onDeleteNote: (Long) -> Unit,
     modifier: Modifier = Modifier,
@@ -111,7 +130,7 @@ private fun TagNotesContent(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = "По этому тегу пока нет заметок",
+                    text = stringResource(R.string.tag_notes_empty),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -126,6 +145,7 @@ private fun TagNotesContent(
                 items(uiState.notes, key = { it.id }) { note ->
                     TagNoteCard(
                         note = note,
+                        locale = locale,
                         onEdit = { onEditNote(note.id) },
                         onDelete = { onDeleteNote(note.id) },
                     )
@@ -138,6 +158,7 @@ private fun TagNotesContent(
 @Composable
 private fun TagNoteCard(
     note: CalendarEvent,
+    locale: Locale,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -170,23 +191,29 @@ private fun TagNoteCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "Создано: ${formatNoteDateTime(note.createdAtMillis)}",
+                    text = stringResource(
+                        R.string.tag_notes_created,
+                        formatNoteDateTime(note.createdAtMillis, locale),
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    text = "Изменено: ${formatNoteDateTime(note.updatedAtMillis)}",
+                    text = stringResource(
+                        R.string.tag_notes_updated,
+                        formatNoteDateTime(note.updatedAtMillis, locale),
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             IconButton(onClick = onEdit) {
-                Icon(Icons.Default.Edit, contentDescription = "Редактировать")
+                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.action_edit))
             }
             IconButton(onClick = onDelete) {
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = "Удалить",
+                    contentDescription = stringResource(R.string.action_delete),
                     tint = MaterialTheme.colorScheme.error,
                 )
             }

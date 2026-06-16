@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ua.danichapps.radiantdays.domain.model.EventColor
+import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.model.Tag
 import ua.danichapps.radiantdays.domain.model.onError
 import ua.danichapps.radiantdays.domain.model.onSuccess
@@ -19,12 +20,14 @@ import ua.danichapps.radiantdays.domain.usecase.AddTagUseCase
 import ua.danichapps.radiantdays.domain.usecase.DeleteTagUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetTagsUseCase
 import ua.danichapps.radiantdays.domain.usecase.UpdateTagUseCase
+import ua.danichapps.radiantdays.locale.DomainErrorStrings
 
 class TagSettingsViewModel(
     private val getTagsUseCase: GetTagsUseCase,
     private val addTagUseCase: AddTagUseCase,
     private val updateTagUseCase: UpdateTagUseCase,
     private val deleteTagUseCase: DeleteTagUseCase,
+    private val errorStrings: DomainErrorStrings,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(TagSettingsUiState())
@@ -48,11 +51,11 @@ class TagSettingsViewModel(
                     _uiState.update { it.copy(tagNameError = null) }
                     _events.send(TagSettingsUiEvent.TagCreated(tag.guid))
                 }
-                .onError { _, message ->
-                    if (isFieldLevelAddTagError(message)) {
-                        _uiState.update { it.copy(tagNameError = message) }
+                .onError { _, key, args ->
+                    if (isFieldLevelAddTagError(key)) {
+                        _uiState.update { it.copy(tagNameError = errorStrings.resolve(key, args)) }
                     } else {
-                        _events.send(TagSettingsUiEvent.ShowError(message))
+                        _events.send(TagSettingsUiEvent.ShowError(errorStrings.resolve(key, args)))
                     }
                 }
         }
@@ -73,16 +76,16 @@ class TagSettingsViewModel(
                 .onSuccess {
                     _uiState.update { it.copy(editingTag = null) }
                 }
-                .onError { _, message ->
-                    _events.send(TagSettingsUiEvent.ShowError(message))
+                .onError { _, key, args ->
+                    _events.send(TagSettingsUiEvent.ShowError(errorStrings.resolve(key, args)))
                 }
         }
     }
 
     fun deleteTag(tag: Tag) {
         viewModelScope.launch {
-            deleteTagUseCase(tag.guid).onError { _, message ->
-                _events.send(TagSettingsUiEvent.ShowError(message))
+            deleteTagUseCase(tag.guid).onError { _, key, args ->
+                _events.send(TagSettingsUiEvent.ShowError(errorStrings.resolve(key, args)))
             }
         }
     }
@@ -90,8 +93,8 @@ class TagSettingsViewModel(
     fun toggleTagPinned(tag: Tag) {
         viewModelScope.launch {
             updateTagUseCase(tag.copy(isPinned = !tag.isPinned))
-                .onError { _, message ->
-                    _events.send(TagSettingsUiEvent.ShowError(message))
+                .onError { _, key, args ->
+                    _events.send(TagSettingsUiEvent.ShowError(errorStrings.resolve(key, args)))
                 }
         }
     }
@@ -99,10 +102,12 @@ class TagSettingsViewModel(
     private fun observeTags() {
         viewModelScope.launch {
             getTagsUseCase()
-                .catch { throwable ->
+                .catch {
                     _uiState.update { it.copy(isLoading = false) }
                     _events.send(
-                        TagSettingsUiEvent.ShowError(throwable.message ?: "Не удалось загрузить теги"),
+                        TagSettingsUiEvent.ShowError(
+                            errorStrings.resolve(MessageKey.LOAD_TAGS_FAILED),
+                        ),
                     )
                 }
                 .collect { tags ->
@@ -112,6 +117,6 @@ class TagSettingsViewModel(
         }
     }
 
-    private fun isFieldLevelAddTagError(message: String): Boolean =
-        message == "Введите имя тега" || message == "Тег с таким именем уже существует"
+    private fun isFieldLevelAddTagError(key: MessageKey): Boolean =
+        key == MessageKey.TAG_NAME_REQUIRED || key == MessageKey.TAG_NAME_TAKEN
 }

@@ -35,11 +35,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
+import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.domain.model.AiAction
 import ua.danichapps.radiantdays.ui.aiactions.AiActionsViewModel
 import ua.danichapps.radiantdays.ui.common.dialog.AiActionEditDialog
@@ -66,10 +68,10 @@ fun AiActionsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("AI-действия") },
+                title = { Text(stringResource(R.string.ai_actions_title)) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
             )
@@ -85,7 +87,7 @@ fun AiActionsScreen(
                     .navigationBarsPadding()
                     .padding(16.dp),
             ) {
-                Text("Добавить действие")
+                Text(stringResource(R.string.ai_action_add))
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -102,12 +104,12 @@ fun AiActionsScreen(
 
     if (showAddDialog) {
         AiActionEditDialog(
-            title = "Добавить действие",
+            title = stringResource(R.string.ai_action_add),
             initialName = "",
             initialDescription = "",
             initialPrompt = "",
             initialIsVisible = true,
-            confirmText = "Добавить",
+            confirmText = stringResource(R.string.action_add),
             externalError = uiState.actionNameError,
             onConfirm = viewModel::addAction,
             onInputChange = viewModel::clearAddError,
@@ -120,12 +122,12 @@ fun AiActionsScreen(
 
     uiState.editingAction?.let { action ->
         AiActionEditDialog(
-            title = "Редактировать действие",
+            title = stringResource(R.string.ai_action_edit),
             initialName = action.name,
             initialDescription = action.description.orEmpty(),
             initialPrompt = action.prompt,
             initialIsVisible = action.isVisible,
-            confirmText = "Сохранить",
+            confirmText = stringResource(R.string.action_save),
             onConfirm = viewModel::updateAction,
             onDismiss = viewModel::dismissEdit,
         )
@@ -175,7 +177,7 @@ private fun AiActionsContent(
                             modifier = Modifier.draggableHandle(),
                             onClick = {},
                         ) {
-                            Icon(Icons.Default.DragHandle, contentDescription = "Перетащить")
+                            Icon(Icons.Default.DragHandle, contentDescription = stringResource(R.string.action_drag))
                         }
                     },
                     headlineContent = { Text(action.name) },
@@ -189,13 +191,13 @@ private fun AiActionsContent(
                                 onCheckedChange = { onToggleVisible(action) },
                             )
                             IconButton(onClick = { onEdit(action) }) {
-                                Icon(Icons.Default.Edit, contentDescription = "Редактировать")
+                                Icon(Icons.Default.Edit, contentDescription = stringResource(R.string.action_edit))
                             }
                             IconButton(
                                 onClick = { onDelete(action) },
                                 enabled = !action.isBuiltIn,
                             ) {
-                                Icon(Icons.Default.Delete, contentDescription = "Удалить")
+                                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.action_delete))
                             }
                         }
                     },

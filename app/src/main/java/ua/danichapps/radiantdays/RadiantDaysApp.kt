@@ -14,6 +14,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import ua.danichapps.radiantdays.locale.AppLocaleManager
+import ua.danichapps.radiantdays.locale.AppLocaleStore
 import ua.danichapps.radiantdays.notification.AlarmScheduler
 import ua.danichapps.radiantdays.notification.EventNotificationManager
 import ua.danichapps.radiantdays.notification.ReminderFallbackWorker
@@ -61,6 +63,9 @@ class RadiantDaysApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        val localeStore = AppLocaleStore(this)
+        AppLocaleManager().apply(localeStore.getTag())
 
         startKoin {
             androidLogger(Level.ERROR)

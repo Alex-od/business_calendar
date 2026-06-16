@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ua.danichapps.radiantdays.domain.model.AiAction
+import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.model.onError
 import ua.danichapps.radiantdays.domain.model.onSuccess
 import ua.danichapps.radiantdays.domain.usecase.AddAiActionUseCase
@@ -19,6 +20,7 @@ import ua.danichapps.radiantdays.domain.usecase.DeleteAiActionUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetAiActionsUseCase
 import ua.danichapps.radiantdays.domain.usecase.ReorderAiActionsUseCase
 import ua.danichapps.radiantdays.domain.usecase.UpdateAiActionUseCase
+import ua.danichapps.radiantdays.locale.DomainErrorStrings
 
 class AiActionsViewModel(
     private val getAiActionsUseCase: GetAiActionsUseCase,
@@ -26,6 +28,7 @@ class AiActionsViewModel(
     private val updateAiActionUseCase: UpdateAiActionUseCase,
     private val deleteAiActionUseCase: DeleteAiActionUseCase,
     private val reorderAiActionsUseCase: ReorderAiActionsUseCase,
+    private val errorStrings: DomainErrorStrings,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AiActionsUiState())
@@ -49,11 +52,11 @@ class AiActionsViewModel(
                     _uiState.update { it.copy(actionNameError = null) }
                     _events.send(AiActionsUiEvent.ActionSaved)
                 }
-                .onError { _, message ->
-                    if (isFieldLevelError(message)) {
-                        _uiState.update { it.copy(actionNameError = message) }
+                .onError { _, key, args ->
+                    if (isFieldLevelError(key)) {
+                        _uiState.update { it.copy(actionNameError = errorStrings.resolve(key, args)) }
                     } else {
-                        _events.send(AiActionsUiEvent.ShowError(message))
+                        _events.send(AiActionsUiEvent.ShowError(errorStrings.resolve(key, args)))
                     }
                 }
         }
@@ -80,16 +83,16 @@ class AiActionsViewModel(
             ).onSuccess {
                 _uiState.update { it.copy(editingAction = null) }
                 _events.send(AiActionsUiEvent.ActionSaved)
-            }.onError { _, message ->
-                _events.send(AiActionsUiEvent.ShowError(message))
+            }.onError { _, key, args ->
+                _events.send(AiActionsUiEvent.ShowError(errorStrings.resolve(key, args)))
             }
         }
     }
 
     fun deleteAction(action: AiAction) {
         viewModelScope.launch {
-            deleteAiActionUseCase(action.guid).onError { _, message ->
-                _events.send(AiActionsUiEvent.ShowError(message))
+            deleteAiActionUseCase(action.guid).onError { _, key, args ->
+                _events.send(AiActionsUiEvent.ShowError(errorStrings.resolve(key, args)))
             }
         }
     }
@@ -97,8 +100,8 @@ class AiActionsViewModel(
     fun toggleVisible(action: AiAction) {
         viewModelScope.launch {
             updateAiActionUseCase(action.copy(isVisible = !action.isVisible))
-                .onError { _, message ->
-                    _events.send(AiActionsUiEvent.ShowError(message))
+                .onError { _, key, args ->
+                    _events.send(AiActionsUiEvent.ShowError(errorStrings.resolve(key, args)))
                 }
         }
     }
@@ -111,8 +114,8 @@ class AiActionsViewModel(
         _uiState.update { it.copy(actions = current) }
         viewModelScope.launch {
             reorderAiActionsUseCase(current.map { action -> action.guid })
-                .onError { _, message ->
-                    _events.send(AiActionsUiEvent.ShowError(message))
+                .onError { _, key, args ->
+                    _events.send(AiActionsUiEvent.ShowError(errorStrings.resolve(key, args)))
                 }
         }
     }
@@ -120,11 +123,11 @@ class AiActionsViewModel(
     private fun observeActions() {
         viewModelScope.launch {
             getAiActionsUseCase()
-                .catch { throwable ->
+                .catch {
                     _uiState.update { it.copy(isLoading = false) }
                     _events.send(
                         AiActionsUiEvent.ShowError(
-                            throwable.message ?: "Не удалось загрузить AI-действия",
+                            errorStrings.resolve(MessageKey.LOAD_AI_ACTIONS_FAILED),
                         ),
                     )
                 }
@@ -134,8 +137,8 @@ class AiActionsViewModel(
         }
     }
 
-    private fun isFieldLevelError(message: String): Boolean =
-        message == "Введите название действия" ||
-            message == "Введите промпт" ||
-            message == "Действие с таким названием уже существует"
+    private fun isFieldLevelError(key: MessageKey): Boolean =
+        key == MessageKey.AI_ACTION_NAME_REQUIRED ||
+            key == MessageKey.AI_ACTION_PROMPT_REQUIRED ||
+            key == MessageKey.AI_ACTION_NAME_TAKEN
 }

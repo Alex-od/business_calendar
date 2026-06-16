@@ -1,9 +1,11 @@
 package ua.danichapps.radiantdays.ai
 
+import ua.danichapps.radiantdays.R
+
 data class AiModelOption(
     val id: String,
     val displayName: String,
-    val description: String,
+    val descriptionRes: Int,
 )
 
 object AiModels {
@@ -13,17 +15,17 @@ object AiModels {
         AiModelOption(
             id = "gpt-5-nano",
             displayName = "GPT-5 Nano",
-            description = "Быстрая и экономичная",
+            descriptionRes = R.string.ai_model_nano_desc,
         ),
         AiModelOption(
             id = "gpt-5-mini",
             displayName = "GPT-5 Mini",
-            description = "Баланс скорости и качества",
+            descriptionRes = R.string.ai_model_mini_desc,
         ),
         AiModelOption(
             id = "gpt-5",
             displayName = "GPT-5",
-            description = "Максимальное качество",
+            descriptionRes = R.string.ai_model_full_desc,
         ),
     )
 

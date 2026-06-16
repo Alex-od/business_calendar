@@ -15,7 +15,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.domain.model.EventColor
 import ua.danichapps.radiantdays.ui.common.TagColorPicker
 
@@ -33,6 +35,7 @@ fun TagEditDialog(
     var name by remember { mutableStateOf(initialName) }
     var color by remember { mutableStateOf(initialColor) }
     var localError by remember { mutableStateOf<String?>(null) }
+    val tagNameRequiredError = stringResource(R.string.error_tag_name_required)
 
     LaunchedEffect(initialName, initialColor) {
         name = initialName
@@ -54,7 +57,7 @@ fun TagEditDialog(
             TextButton(
                 onClick = {
                     if (name.isBlank()) {
-                        localError = "Введите имя тега"
+                        localError = tagNameRequiredError
                     } else {
                         onConfirm(name, color)
                     }
@@ -65,7 +68,7 @@ fun TagEditDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Отмена")
+                Text(stringResource(R.string.action_cancel))
             }
         },
         title = { Text(title) },
@@ -78,7 +81,7 @@ fun TagEditDialog(
                         localError = null
                         onInputChange()
                     },
-                    label = { Text("Введите имя тега") },
+                    label = { Text(stringResource(R.string.tag_name_label)) },
                     isError = displayedError != null,
                     supportingText = displayedError?.let { message ->
                         { Text(message, color = MaterialTheme.colorScheme.error) }
@@ -87,7 +90,7 @@ fun TagEditDialog(
                     modifier = Modifier,
                 )
                 Spacer(Modifier.height(12.dp))
-                Text("Цвет", style = MaterialTheme.typography.labelMedium)
+                Text(stringResource(R.string.tag_color), style = MaterialTheme.typography.labelMedium)
                 Spacer(Modifier.height(8.dp))
                 TagColorPicker(
                     selectedColor = color,

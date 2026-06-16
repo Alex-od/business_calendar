@@ -17,6 +17,7 @@ import ua.danichapps.radiantdays.domain.model.AiChatMessage
 import ua.danichapps.radiantdays.domain.model.AiChatRole
 import ua.danichapps.radiantdays.domain.model.AiNoteContext
 import ua.danichapps.radiantdays.domain.model.CalendarEvent
+import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.model.onError
 import ua.danichapps.radiantdays.domain.model.onSuccess
 import ua.danichapps.radiantdays.domain.repository.CalendarEventRepository
@@ -26,6 +27,8 @@ import ua.danichapps.radiantdays.domain.usecase.GetTagsUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetVisibleAiActionsUseCase
 import ua.danichapps.radiantdays.domain.usecase.RunAiActionUseCase
 import ua.danichapps.radiantdays.domain.usecase.UpdateEventUseCase
+import ua.danichapps.radiantdays.locale.AppLocaleStore
+import ua.danichapps.radiantdays.locale.DomainErrorStrings
 import ua.danichapps.radiantdays.notification.AlarmScheduler
 import ua.danichapps.radiantdays.widget.CalendarWidgetUpdater
 import java.util.Calendar
@@ -45,6 +48,8 @@ class AddEditEventViewModel(
     private val repository: CalendarEventRepository,
     private val alarmScheduler: AlarmScheduler,
     private val widgetUpdater: CalendarWidgetUpdater,
+    private val errorStrings: DomainErrorStrings,
+    private val localeStore: AppLocaleStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddEditEventUiState())
@@ -86,6 +91,7 @@ class AddEditEventViewModel(
                 title = state.title,
                 tagNames = tagNames,
                 noteDateMillis = state.startTimeMillis,
+                locale = localeStore.resolveLocale(),
             )
             runAiActionUseCase(actionGuid, context)
                 .onSuccess { result ->
@@ -100,9 +106,9 @@ class AddEditEventViewModel(
                         )
                     }
                 }
-                .onError { _, message ->
+                .onError { _, key, args ->
                     _uiState.update { it.copy(aiLoading = false) }
-                    _events.send(AddEditEventUiEvent.ShowError(message))
+                    _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args)))
                 }
         }
     }
@@ -150,14 +156,14 @@ class AddEditEventViewModel(
                         )
                     }
                 }
-                .onError { _, errorMessage ->
+                .onError { _, key, args ->
                     _uiState.update { state ->
                         state.copy(
                             aiChatLoading = false,
                             aiChatMessages = state.aiChatMessages.dropLast(1),
                         )
                     }
-                    _events.send(AddEditEventUiEvent.ShowError(errorMessage))
+                    _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args)))
                 }
         }
     }
@@ -231,7 +237,7 @@ class AddEditEventViewModel(
                 }
             } else {
                 _uiState.update { it.copy(isLoading = false) }
-                _events.send(AddEditEventUiEvent.ShowError("Note not found"))
+                _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(MessageKey.NOTE_NOT_FOUND)))
             }
         }
     }
@@ -447,8 +453,8 @@ class AddEditEventViewModel(
                     }
                     widgetUpdater.refresh()
                 }
-                .onError { _, msg ->
-                    _events.send(AddEditEventUiEvent.ShowError(msg))
+                .onError { _, key, args ->
+                    _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args)))
                 }
         } else {
             addEventUseCase(event)
@@ -467,8 +473,8 @@ class AddEditEventViewModel(
                     }
                     widgetUpdater.refresh()
                 }
-                .onError { _, msg ->
-                    _events.send(AddEditEventUiEvent.ShowError(msg))
+                .onError { _, key, args ->
+                    _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args)))
                 }
         }
     }
@@ -489,9 +495,11 @@ class AddEditEventViewModel(
     private fun observeTags() {
         viewModelScope.launch {
             getTagsUseCase()
-                .catch { throwable ->
+                .catch {
                     _events.send(
-                        AddEditEventUiEvent.ShowError(throwable.message ?: "Не удалось загрузить теги"),
+                        AddEditEventUiEvent.ShowError(
+                            errorStrings.resolve(MessageKey.LOAD_TAGS_FAILED),
+                        ),
                     )
                 }
                 .collect { tags ->
@@ -508,10 +516,10 @@ class AddEditEventViewModel(
     private fun observeVisibleAiActions() {
         viewModelScope.launch {
             getVisibleAiActionsUseCase()
-                .catch { throwable ->
+                .catch {
                     _events.send(
                         AddEditEventUiEvent.ShowError(
-                            throwable.message ?: "Не удалось загрузить AI-действия",
+                            errorStrings.resolve(MessageKey.LOAD_AI_ACTIONS_FAILED),
                         ),
                     )
                 }

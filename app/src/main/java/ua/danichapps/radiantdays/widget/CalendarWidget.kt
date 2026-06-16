@@ -25,18 +25,20 @@ import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import kotlinx.coroutines.flow.first
 import org.koin.core.context.GlobalContext
+import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.calendar.CalendarDay
-import ua.danichapps.radiantdays.calendar.DAY_LABELS
 import ua.danichapps.radiantdays.calendar.buildMonthDays
 import ua.danichapps.radiantdays.calendar.monthWindow
 import ua.danichapps.radiantdays.calendar.normaliseToDayStart
 import ua.danichapps.radiantdays.calendar.sameDay
+import ua.danichapps.radiantdays.calendar.weekdayLabels
 import ua.danichapps.radiantdays.domain.model.CalendarEvent
 import ua.danichapps.radiantdays.domain.model.DomainResult
 import ua.danichapps.radiantdays.domain.model.ReminderPolicy
 import ua.danichapps.radiantdays.domain.model.displayHeadline
 import ua.danichapps.radiantdays.domain.usecase.GetEventsForMonthUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetUpcomingEventsUseCase
+import ua.danichapps.radiantdays.locale.AppLocaleStore
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -52,6 +54,11 @@ class CalendarWidget : GlanceAppWidget() {
         val koin = GlobalContext.get()
         val getEventsForMonthUseCase = koin.get<GetEventsForMonthUseCase>()
         val getUpcomingEventsUseCase = koin.get<GetUpcomingEventsUseCase>()
+        val localeStore = koin.get<AppLocaleStore>()
+        val locale = localeStore.resolveLocale(context)
+        val dayLabels = weekdayLabels(locale)
+        val remindersTitle = context.getString(R.string.widget_reminders)
+        val noUpcomingText = context.getString(R.string.widget_no_upcoming)
 
         val now = System.currentTimeMillis()
         val next24hMs = 24 * 60 * 60 * 1_000L
@@ -72,6 +79,10 @@ class CalendarWidget : GlanceAppWidget() {
                     currentMonthMillis = now,
                     eventsForMonth = eventsForMonth,
                     reminders = reminders,
+                    locale = locale,
+                    dayLabels = dayLabels,
+                    remindersTitle = remindersTitle,
+                    noUpcomingText = noUpcomingText,
                 )
             }
         }
@@ -83,6 +94,10 @@ private fun WidgetContent(
     currentMonthMillis: Long,
     eventsForMonth: Map<Long, List<CalendarEvent>>,
     reminders: List<CalendarEvent>,
+    locale: Locale,
+    dayLabels: List<String>,
+    remindersTitle: String,
+    noUpcomingText: String,
 ) {
     Column(
         modifier = GlanceModifier
@@ -90,20 +105,25 @@ private fun WidgetContent(
             .background(GlanceTheme.colors.background)
             .padding(8.dp),
     ) {
-        WidgetMonthHeader(currentMonthMillis = currentMonthMillis)
-        WidgetWeekDayHeaders()
+        WidgetMonthHeader(currentMonthMillis = currentMonthMillis, locale = locale)
+        WidgetWeekDayHeaders(dayLabels = dayLabels)
         WidgetMonthGrid(
             currentMonthMillis = currentMonthMillis,
             eventsForMonth = eventsForMonth,
         )
         Spacer(GlanceModifier.height(8.dp))
-        WidgetRemindersSection(reminders = reminders)
+        WidgetRemindersSection(
+            reminders = reminders,
+            locale = locale,
+            remindersTitle = remindersTitle,
+            noUpcomingText = noUpcomingText,
+        )
     }
 }
 
 @Composable
-private fun WidgetMonthHeader(currentMonthMillis: Long) {
-    val monthLabel = SimpleDateFormat("MMMM yyyy", Locale.getDefault())
+private fun WidgetMonthHeader(currentMonthMillis: Long, locale: Locale) {
+    val monthLabel = SimpleDateFormat("MMMM yyyy", locale)
         .format(Date(currentMonthMillis))
     Text(
         text = monthLabel,
@@ -119,9 +139,9 @@ private fun WidgetMonthHeader(currentMonthMillis: Long) {
 }
 
 @Composable
-private fun WidgetWeekDayHeaders() {
+private fun WidgetWeekDayHeaders(dayLabels: List<String>) {
     Row(GlanceModifier.fillMaxWidth()) {
-        DAY_LABELS.forEach { label ->
+        dayLabels.forEach { label ->
             Text(
                 text = label,
                 modifier = GlanceModifier.defaultWeight(),
@@ -227,11 +247,16 @@ private fun WidgetDayCell(
 }
 
 @Composable
-private fun WidgetRemindersSection(reminders: List<CalendarEvent>) {
-    val timeFormat = SimpleDateFormat("HH:mm", Locale.getDefault())
+private fun WidgetRemindersSection(
+    reminders: List<CalendarEvent>,
+    locale: Locale,
+    remindersTitle: String,
+    noUpcomingText: String,
+) {
+    val timeFormat = SimpleDateFormat("HH:mm", locale)
 
     Text(
-        text = "Напоминания",
+        text = remindersTitle,
         style = TextStyle(
             color = GlanceTheme.colors.primary,
             fontWeight = FontWeight.Bold,
@@ -241,7 +266,7 @@ private fun WidgetRemindersSection(reminders: List<CalendarEvent>) {
 
     if (reminders.isEmpty()) {
         Text(
-            text = "Нет предстоящих",
+            text = noUpcomingText,
             style = TextStyle(
                 color = GlanceTheme.colors.onBackground,
                 fontSize = 11.sp,

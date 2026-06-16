@@ -40,8 +40,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.domain.model.AiChatMessage
 import ua.danichapps.radiantdays.domain.model.AiChatRole
 import ua.danichapps.radiantdays.ui.addevent.AddEditEventUiEvent
@@ -82,10 +84,10 @@ fun AiChatScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("AI-чат") },
+                title = { Text(stringResource(R.string.ai_chat_title)) },
                 navigationIcon = {
                     IconButton(onClick = viewModel::onAiChatDismiss) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
                     }
                 },
                 actions = {
@@ -93,13 +95,13 @@ fun AiChatScreen(
                         onClick = viewModel::onAiChatReplace,
                         enabled = hasAssistantReply && !uiState.aiChatLoading,
                     ) {
-                        Text("Заменить")
+                        Text(stringResource(R.string.action_replace))
                     }
                     TextButton(
                         onClick = viewModel::onAiChatAppend,
                         enabled = hasAssistantReply && !uiState.aiChatLoading,
                     ) {
-                        Text("Добавить")
+                        Text(stringResource(R.string.action_add))
                     }
                 },
             )
@@ -149,7 +151,7 @@ fun AiChatScreen(
                         value = inputText,
                         onValueChange = { inputText = it },
                         modifier = Modifier.weight(1f),
-                        placeholder = { Text("Сообщение") },
+                        placeholder = { Text(stringResource(R.string.ai_chat_message)) },
                         enabled = !uiState.aiChatLoading,
                         maxLines = 4,
                     )
@@ -162,7 +164,7 @@ fun AiChatScreen(
                         },
                         enabled = inputText.isNotBlank() && !uiState.aiChatLoading,
                     ) {
-                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = "Отправить")
+                        Icon(Icons.AutoMirrored.Filled.Send, contentDescription = stringResource(R.string.action_send))
                     }
                 }
             }
@@ -179,7 +181,11 @@ private fun ChatMessageBubble(message: AiChatMessage) {
     } else {
         MaterialTheme.colorScheme.surfaceVariant
     }
-    val label = if (isUser) "Вы" else "AI"
+    val label = if (isUser) {
+        stringResource(R.string.ai_chat_you)
+    } else {
+        stringResource(R.string.ai_chat_assistant)
+    }
 
     Box(
         modifier = Modifier.fillMaxWidth(),

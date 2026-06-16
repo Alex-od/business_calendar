@@ -4,6 +4,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val noteDateTimeFormat = SimpleDateFormat("dd.MM.yyyy HH:mm", Locale.getDefault())
-
-fun formatNoteDateTime(millis: Long): String = noteDateTimeFormat.format(Date(millis))
+fun formatNoteDateTime(millis: Long, locale: Locale): String {
+    val format = SimpleDateFormat("dd.MM.yyyy HH:mm", locale)
+    return format.format(Date(millis))
+}

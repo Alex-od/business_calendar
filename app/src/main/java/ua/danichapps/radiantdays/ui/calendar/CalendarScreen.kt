@@ -55,12 +55,17 @@ import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import ua.danichapps.radiantdays.calendar.CalendarDay
-import ua.danichapps.radiantdays.calendar.DAY_LABELS
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import org.koin.compose.koinInject
+import ua.danichapps.radiantdays.R
+import ua.danichapps.radiantdays.calendar.weekdayLabels
+import ua.danichapps.radiantdays.locale.AppLocaleStore
 import ua.danichapps.radiantdays.calendar.buildMonthDays
 import ua.danichapps.radiantdays.calendar.sameDay
 import ua.danichapps.radiantdays.domain.model.CalendarEvent
@@ -88,6 +93,9 @@ fun CalendarScreen(
     viewModel: CalendarViewModel = koinViewModel(),
 ) {
     // FIX #3: collectAsStateWithLifecycle stops collection when the screen is not visible
+    val context = LocalContext.current
+    val localeStore: AppLocaleStore = koinInject()
+    val locale = remember(context) { localeStore.resolveLocale(context) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -107,7 +115,7 @@ fun CalendarScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             FloatingActionButton(onClick = { onAddEvent(uiState.selectedDayMillis) }) {
-                Icon(Icons.Default.Add, contentDescription = "Add event")
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.calendar_add_event))
             }
         },
     ) { padding ->
@@ -124,10 +132,11 @@ fun CalendarScreen(
             ) {
                 MonthHeader(
                     currentMonthMillis = uiState.currentMonthMillis,
+                    locale = locale,
                     onPrevious         = viewModel::navigateToPreviousMonth,
                     onNext             = viewModel::navigateToNextMonth,
                 )
-                WeekDayHeaders()
+                WeekDayHeaders(locale = locale)
                 MonthGrid(
                     currentMonthMillis = uiState.currentMonthMillis,
                     selectedDayMillis  = uiState.selectedDayMillis,
@@ -147,6 +156,7 @@ fun CalendarScreen(
                 } else {
                     EventListForDay(
                         events        = uiState.eventsForDay,
+                        locale        = locale,
                         onEditEvent   = onEditEvent,
                         onDeleteEvent = viewModel::deleteEvent,
                     )
@@ -167,7 +177,7 @@ private fun CalendarTopBar(
         title = {},
         actions = {
             IconButton(onClick = onOpenSettings) {
-                Icon(Icons.Default.Settings, contentDescription = "Настройки")
+                Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.calendar_settings))
             }
         },
     )
@@ -176,11 +186,12 @@ private fun CalendarTopBar(
 @Composable
 private fun MonthHeader(
     currentMonthMillis: Long,
+    locale: Locale,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
 ) {
-    val monthLabel = remember(currentMonthMillis) {
-        SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(Date(currentMonthMillis))
+    val monthLabel = remember(currentMonthMillis, locale) {
+        SimpleDateFormat("MMMM yyyy", locale).format(Date(currentMonthMillis))
     }
     Row(
         modifier              = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
@@ -188,20 +199,20 @@ private fun MonthHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         IconButton(onClick = onPrevious) {
-            Icon(Icons.Default.ChevronLeft, contentDescription = "Previous month")
+            Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.calendar_previous_month))
         }
         Text(text = monthLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         IconButton(onClick = onNext) {
-            Icon(Icons.Default.ChevronRight, contentDescription = "Next month")
+            Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.calendar_next_month))
         }
     }
 }
 
 @Composable
-private fun WeekDayHeaders() {
-    // FIX #6: DAY_LABELS is a top-level val, no allocation here
+private fun WeekDayHeaders(locale: Locale) {
+    val dayLabels = remember(locale) { weekdayLabels(locale) }
     Row(Modifier.fillMaxWidth()) {
-        DAY_LABELS.forEach { label ->
+        dayLabels.forEach { label ->
             Text(
                 text      = label,
                 modifier  = Modifier.weight(1f),
@@ -328,6 +339,7 @@ private fun MonthGrid(
 @Composable
 private fun EventListForDay(
     events: List<CalendarEvent>,
+    locale: Locale,
     onEditEvent: (Long) -> Unit,
     onDeleteEvent: (Long) -> Unit,
 ) {
@@ -337,7 +349,7 @@ private fun EventListForDay(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text  = "No events for this day",
+                text  = stringResource(R.string.calendar_no_events),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -351,6 +363,7 @@ private fun EventListForDay(
         items(events, key = { it.id }) { event ->
             EventCard(
                 event    = event,
+                locale   = locale,
                 onClick  = { onEditEvent(event.id) },
                 onDelete = { onDeleteEvent(event.id) },
             )
@@ -361,11 +374,12 @@ private fun EventListForDay(
 @Composable
 private fun EventCard(
     event: CalendarEvent,
+    locale: Locale,
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
     // SimpleDateFormat is not thread-safe; one instance per composable is safe in single-threaded Compose
-    val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
+    val timeFormat = remember(locale) { SimpleDateFormat("HH:mm", locale) }
 
     val contentAlpha = if (event.isCompleted) 0.5f else 1f
 
@@ -433,14 +447,14 @@ private fun EventCard(
                     )
                 } else {
                     Text(
-                        text  = "All day",
+                        text  = stringResource(R.string.calendar_all_day),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
             IconButton(onClick = onDelete) {
-                Icon(Icons.Default.Delete, contentDescription = "Delete event",
+                Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.calendar_delete_event),
                     tint = MaterialTheme.colorScheme.error)
             }
         }
