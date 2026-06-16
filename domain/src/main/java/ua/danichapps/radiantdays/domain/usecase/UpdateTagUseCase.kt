@@ -1,6 +1,7 @@
 package ua.danichapps.radiantdays.domain.usecase
 
 import ua.danichapps.radiantdays.domain.model.DomainResult
+import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.model.Tag
 import ua.danichapps.radiantdays.domain.model.Tag.Companion.UNTAGGED_NAME
 import ua.danichapps.radiantdays.domain.repository.TagRepository
@@ -13,25 +14,26 @@ class UpdateTagUseCase(
         if (tag.guid.isBlank() || Tag.isUntaggedFilter(tag.guid)) {
             return DomainResult.Error(
                 IllegalArgumentException("Cannot update virtual tag"),
-                "Этот тег нельзя изменить",
+                MessageKey.TAG_CANNOT_UPDATE,
             )
         }
         if (trimmedName.isBlank()) {
             return DomainResult.Error(
                 IllegalArgumentException("Tag name is required"),
-                "Введите имя тега",
+                MessageKey.TAG_NAME_REQUIRED,
             )
         }
         if (trimmedName.equals(UNTAGGED_NAME, ignoreCase = true)) {
             return DomainResult.Error(
                 IllegalArgumentException("Reserved tag name"),
-                "Имя «$UNTAGGED_NAME» зарезервировано",
+                MessageKey.TAG_NAME_RESERVED,
+                listOf(UNTAGGED_NAME),
             )
         }
         if (repository.isTagNameTaken(trimmedName, excludeGuid = tag.guid)) {
             return DomainResult.Error(
                 IllegalArgumentException("Tag name already exists"),
-                "Тег с таким именем уже существует",
+                MessageKey.TAG_NAME_TAKEN,
             )
         }
 

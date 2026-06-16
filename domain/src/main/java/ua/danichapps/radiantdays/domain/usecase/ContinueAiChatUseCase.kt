@@ -3,6 +3,7 @@ package ua.danichapps.radiantdays.domain.usecase
 import ua.danichapps.radiantdays.domain.model.AiChatMessage
 import ua.danichapps.radiantdays.domain.model.AiChatRole
 import ua.danichapps.radiantdays.domain.model.DomainResult
+import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.repository.AiCompletionClientProvider
 
 class ContinueAiChatUseCase(
@@ -16,7 +17,7 @@ class ContinueAiChatUseCase(
         if (trimmed.isBlank()) {
             return DomainResult.Error(
                 IllegalArgumentException("Message is required"),
-                "Введите сообщение",
+                MessageKey.CHAT_MESSAGE_REQUIRED,
             )
         }
         val messages = history + AiChatMessage(AiChatRole.USER, trimmed)

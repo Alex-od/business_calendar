@@ -3,6 +3,7 @@ package ua.danichapps.radiantdays.domain.usecase
 import ua.danichapps.radiantdays.domain.model.AiActionResult
 import ua.danichapps.radiantdays.domain.model.AiNoteContext
 import ua.danichapps.radiantdays.domain.model.DomainResult
+import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.repository.AiActionRepository
 import ua.danichapps.radiantdays.domain.repository.AiCompletionClientProvider
 import ua.danichapps.radiantdays.domain.util.AiPromptTemplate
@@ -15,13 +16,13 @@ class RunAiActionUseCase(
         if (context.text.trim().isBlank()) {
             return DomainResult.Error(
                 IllegalArgumentException("Note text is required"),
-                "Введите текст заметки",
+                MessageKey.NOTE_TEXT_REQUIRED,
             )
         }
         val action = repository.getActionByGuid(actionGuid)
             ?: return DomainResult.Error(
                 IllegalArgumentException("Action not found"),
-                "Действие не найдено",
+                MessageKey.AI_ACTION_NOT_FOUND,
             )
         val resolvedPrompt = AiPromptTemplate.resolve(action.prompt, context)
         return when (val result = clientProvider.getClient().complete(resolvedPrompt)) {

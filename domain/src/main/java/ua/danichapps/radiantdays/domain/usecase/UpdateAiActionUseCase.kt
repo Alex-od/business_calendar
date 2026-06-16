@@ -2,6 +2,7 @@ package ua.danichapps.radiantdays.domain.usecase
 
 import ua.danichapps.radiantdays.domain.model.AiAction
 import ua.danichapps.radiantdays.domain.model.DomainResult
+import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.repository.AiActionRepository
 
 class UpdateAiActionUseCase(
@@ -11,27 +12,27 @@ class UpdateAiActionUseCase(
         if (action.guid.isBlank()) {
             return DomainResult.Error(
                 IllegalArgumentException("Action guid is required"),
-                "Некорректное действие",
+                MessageKey.AI_ACTION_INVALID,
             )
         }
         val trimmedName = action.name.trim()
         if (trimmedName.isBlank()) {
             return DomainResult.Error(
                 IllegalArgumentException("Action name is required"),
-                "Введите название действия",
+                MessageKey.AI_ACTION_NAME_REQUIRED,
             )
         }
         val trimmedPrompt = action.prompt.trim()
         if (trimmedPrompt.isBlank()) {
             return DomainResult.Error(
                 IllegalArgumentException("Action prompt is required"),
-                "Введите промпт",
+                MessageKey.AI_ACTION_PROMPT_REQUIRED,
             )
         }
         if (repository.isActionNameTaken(trimmedName, excludeGuid = action.guid)) {
             return DomainResult.Error(
                 IllegalArgumentException("Action name already exists"),
-                "Действие с таким названием уже существует",
+                MessageKey.AI_ACTION_NAME_TAKEN,
             )
         }
         val trimmedDescription = action.description?.trim()?.takeIf { it.isNotBlank() }

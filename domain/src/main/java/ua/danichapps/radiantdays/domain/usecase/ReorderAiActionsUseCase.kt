@@ -1,6 +1,7 @@
 package ua.danichapps.radiantdays.domain.usecase
 
 import ua.danichapps.radiantdays.domain.model.DomainResult
+import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.repository.AiActionRepository
 
 class ReorderAiActionsUseCase(
@@ -10,7 +11,7 @@ class ReorderAiActionsUseCase(
         if (orderedGuids.isEmpty()) {
             return DomainResult.Error(
                 IllegalArgumentException("Order list is empty"),
-                "Список действий пуст",
+                MessageKey.AI_ACTION_ORDER_EMPTY,
             )
         }
         return repository.reorderActions(orderedGuids)

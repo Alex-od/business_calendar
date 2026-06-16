@@ -10,6 +10,7 @@ import org.junit.Before
 import org.junit.Test
 import ua.danichapps.radiantdays.domain.model.AiAction
 import ua.danichapps.radiantdays.domain.model.DomainResult
+import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.repository.AiActionRepository
 
 class DeleteAiActionUseCaseTest {
@@ -36,7 +37,7 @@ class DeleteAiActionUseCaseTest {
         val result = useCase(AiAction.BUILTIN_IMPROVE_GUID)
 
         assertTrue(result is DomainResult.Error)
-        assertEquals("Встроенное действие нельзя удалить", (result as DomainResult.Error).message)
+        assertEquals(MessageKey.AI_ACTION_BUILTIN_DELETE, (result as DomainResult.Error).messageKey)
         coVerify(exactly = 0) { repository.deleteAction(any()) }
     }
 

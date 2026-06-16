@@ -10,6 +10,7 @@ import org.json.JSONObject
 import ua.danichapps.radiantdays.domain.model.AiChatMessage
 import ua.danichapps.radiantdays.domain.model.AiChatRole
 import ua.danichapps.radiantdays.domain.model.DomainResult
+import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.repository.AiCompletionClient
 import java.io.IOException
 import java.net.SocketTimeoutException
@@ -47,10 +48,13 @@ class OpenAiCompletionClient(
                 okHttpClient.newCall(request).execute().use { response ->
                     val responseBody = response.body?.string().orEmpty()
                     if (response.code == 401) {
-                        throw OpenAiException("Неверный API-ключ. Проверьте Settings")
+                        throw OpenAiException(MessageKey.AI_INVALID_API_KEY)
                     }
                     if (!response.isSuccessful) {
-                        throw OpenAiException("OpenAI error ${response.code}: $responseBody")
+                        throw OpenAiException(
+                            MessageKey.AI_HTTP_ERROR,
+                            listOf(response.code.toString(), responseBody),
+                        )
                     }
                     val parsed = JSONObject(responseBody)
                     val content = parsed
@@ -60,18 +64,13 @@ class OpenAiCompletionClient(
                         .getString("content")
                         .trim()
                     if (content.isBlank()) {
-                        throw OpenAiException("Пустой ответ от OpenAI")
+                        throw OpenAiException(MessageKey.AI_EMPTY_RESPONSE)
                     }
                     content
                 }
             }.fold(
                 onSuccess = { DomainResult.Success(it) },
-                onFailure = { throwable ->
-                    DomainResult.Error(
-                        throwable,
-                        mapAiRequestError(throwable),
-                    )
-                },
+                onFailure = { throwable -> mapFailure(throwable) },
             )
         }
 
@@ -80,17 +79,31 @@ class OpenAiCompletionClient(
         AiChatRole.ASSISTANT -> "assistant"
     }
 
-    private fun mapAiRequestError(throwable: Throwable): String {
+    private fun mapFailure(throwable: Throwable): DomainResult.Error {
+        if (throwable is OpenAiException) {
+            return DomainResult.Error(throwable, throwable.messageKey, throwable.messageArgs)
+        }
         if (throwable is SocketTimeoutException || throwable.cause is SocketTimeoutException) {
-            return "Превышено время ожидания ответа AI (${AI_HTTP_READ_TIMEOUT_SECONDS} с). Попробуйте ещё раз"
+            return DomainResult.Error(
+                throwable,
+                MessageKey.AI_TIMEOUT,
+                listOf(AI_HTTP_READ_TIMEOUT_SECONDS.toString()),
+            )
         }
         if (throwable is IOException && throwable.message.orEmpty().contains("timeout", ignoreCase = true)) {
-            return "Превышено время ожидания ответа AI (${AI_HTTP_READ_TIMEOUT_SECONDS} с). Попробуйте ещё раз"
+            return DomainResult.Error(
+                throwable,
+                MessageKey.AI_TIMEOUT,
+                listOf(AI_HTTP_READ_TIMEOUT_SECONDS.toString()),
+            )
         }
-        return throwable.message ?: "Не удалось выполнить AI-запрос"
+        return DomainResult.Error(throwable, MessageKey.AI_REQUEST_FAILED)
     }
 
-    private class OpenAiException(message: String) : Exception(message)
+    private class OpenAiException(
+        val messageKey: MessageKey,
+        val messageArgs: List<String> = emptyList(),
+    ) : Exception(messageKey.name)
 
     private companion object {
         const val API_URL = "https://api.openai.com/v1/chat/completions"

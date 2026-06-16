@@ -10,6 +10,7 @@ import org.junit.Before
 import org.junit.Test
 import ua.danichapps.radiantdays.domain.model.CalendarEvent
 import ua.danichapps.radiantdays.domain.model.DomainResult
+import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.repository.CalendarEventRepository
 
 class AddEventUseCaseTest {
@@ -30,7 +31,7 @@ class AddEventUseCaseTest {
         val result = useCase(event)
 
         assertTrue(result is DomainResult.Error)
-        assertTrue((result as DomainResult.Error).message.contains("blank", ignoreCase = true))
+        assertEquals(MessageKey.EVENT_TEXT_BLANK, (result as DomainResult.Error).messageKey)
         coVerify(exactly = 0) { repository.addEvent(any()) }
     }
 

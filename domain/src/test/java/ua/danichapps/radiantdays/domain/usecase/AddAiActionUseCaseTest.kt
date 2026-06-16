@@ -10,6 +10,7 @@ import org.junit.Before
 import org.junit.Test
 import ua.danichapps.radiantdays.domain.model.AiAction
 import ua.danichapps.radiantdays.domain.model.DomainResult
+import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.repository.AiActionRepository
 
 class AddAiActionUseCaseTest {
@@ -28,7 +29,7 @@ class AddAiActionUseCaseTest {
         val result = useCase(name = "  ", description = null, prompt = "test")
 
         assertTrue(result is DomainResult.Error)
-        assertEquals("Введите название действия", (result as DomainResult.Error).message)
+        assertEquals(MessageKey.AI_ACTION_NAME_REQUIRED, (result as DomainResult.Error).messageKey)
         coVerify(exactly = 0) { repository.addAction(any(), any(), any(), any()) }
     }
 
@@ -37,7 +38,7 @@ class AddAiActionUseCaseTest {
         val result = useCase(name = "Test", description = null, prompt = "  ")
 
         assertTrue(result is DomainResult.Error)
-        assertEquals("Введите промпт", (result as DomainResult.Error).message)
+        assertEquals(MessageKey.AI_ACTION_PROMPT_REQUIRED, (result as DomainResult.Error).messageKey)
         coVerify(exactly = 0) { repository.addAction(any(), any(), any(), any()) }
     }
 
@@ -48,7 +49,7 @@ class AddAiActionUseCaseTest {
         val result = useCase(name = "Test", description = null, prompt = "Do something")
 
         assertTrue(result is DomainResult.Error)
-        assertEquals("Действие с таким названием уже существует", (result as DomainResult.Error).message)
+        assertEquals(MessageKey.AI_ACTION_NAME_TAKEN, (result as DomainResult.Error).messageKey)
     }
 
     @Test

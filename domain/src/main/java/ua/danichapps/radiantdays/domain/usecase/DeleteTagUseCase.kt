@@ -1,6 +1,7 @@
 package ua.danichapps.radiantdays.domain.usecase
 
 import ua.danichapps.radiantdays.domain.model.DomainResult
+import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.model.Tag
 import ua.danichapps.radiantdays.domain.repository.TagRepository
 
@@ -11,7 +12,7 @@ class DeleteTagUseCase(
         if (Tag.isUntaggedFilter(tagGuid)) {
             return DomainResult.Error(
                 IllegalArgumentException("Cannot delete virtual tag"),
-                "Этот тег нельзя удалить",
+                MessageKey.TAG_CANNOT_DELETE,
             )
         }
         return repository.deleteTag(tagGuid)

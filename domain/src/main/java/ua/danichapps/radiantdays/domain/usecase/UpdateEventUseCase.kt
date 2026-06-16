@@ -2,33 +2,29 @@ package ua.danichapps.radiantdays.domain.usecase
 
 import ua.danichapps.radiantdays.domain.model.CalendarEvent
 import ua.danichapps.radiantdays.domain.model.DomainResult
+import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.repository.CalendarEventRepository
 
-/**
- * Validates and updates an existing [CalendarEvent].
- *
- * Business rules enforced here:
- * - [CalendarEvent.id] must be a positive non-zero value.
- * - Description must not be blank.
- * - End time must be в‰Ґ start time.
- *
- * @param repository Data source abstraction (injected).
- */
 class UpdateEventUseCase(private val repository: CalendarEventRepository) {
 
-    /**
-     * @param event Updated event. Must have a valid [CalendarEvent.id].
-     * @return [DomainResult.Success] on success, [DomainResult.Error] on validation/storage failure.
-     */
     suspend operator fun invoke(event: CalendarEvent): DomainResult<Unit> {
         if (event.id == 0L) {
-            return DomainResult.Error(IllegalArgumentException("Cannot update an event with id=0"))
+            return DomainResult.Error(
+                IllegalArgumentException("Cannot update an event with id=0"),
+                MessageKey.EVENT_UNSAVED_UPDATE,
+            )
         }
         if (event.title.isBlank() && event.description.isBlank()) {
-            return DomainResult.Error(IllegalArgumentException("Title or note text must not be blank"))
+            return DomainResult.Error(
+                IllegalArgumentException("Title or note text must not be blank"),
+                MessageKey.EVENT_TEXT_BLANK,
+            )
         }
         if (event.endTimeMillis < event.startTimeMillis) {
-            return DomainResult.Error(IllegalArgumentException("End time must not be before start time"))
+            return DomainResult.Error(
+                IllegalArgumentException("End time must not be before start time"),
+                MessageKey.EVENT_END_BEFORE_START,
+            )
         }
         return repository.updateEvent(event)
     }
