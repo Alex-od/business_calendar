@@ -53,24 +53,24 @@ class EventNotificationManager(private val context: Context) {
         )
 
         val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.mipmap.ic_launcher)
             .setContentTitle(text)
             .setContentText(appContext.getString(R.string.notification_reminder, timeLabel))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setContentIntent(contentIntent)
             .setAutoCancel(true)
             .addAction(
-                R.drawable.ic_launcher_foreground,
+                R.mipmap.ic_launcher,
                 appContext.getString(R.string.event_completed),
                 actionPendingIntent(ReminderContract.ACTION_COMPLETE, eventId),
             )
             .addAction(
-                R.drawable.ic_launcher_foreground,
+                R.mipmap.ic_launcher,
                 appContext.getString(R.string.notification_snooze_5),
                 actionPendingIntent(ReminderContract.ACTION_SNOOZE_5, eventId),
             )
             .addAction(
-                R.drawable.ic_launcher_foreground,
+                R.mipmap.ic_launcher,
                 appContext.getString(R.string.notification_snooze_10),
                 actionPendingIntent(ReminderContract.ACTION_SNOOZE_10, eventId),
             )

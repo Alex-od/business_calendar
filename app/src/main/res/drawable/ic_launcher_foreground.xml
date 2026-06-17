@@ -1,75 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!--
-    Adaptive icon foreground layer — white calendar card on a transparent canvas.
-
-    Layout (108 × 108 viewport; safe zone ≈ 21–87 on each axis):
-      • Card body   : (22, 22) → (86, 86), corner-radius 8
-      • Blue header : (22, 22) → (86, 44)
-      • Month-label pill in header
-      • 5-column (Mon–Fri) day grid with a highlighted "today" circle
--->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-
-    <!-- ── Drop shadow (offset 2 dp down-right) ─────────────────────────── -->
-    <path
-        android:fillColor="#28000000"
-        android:pathData="M32,24 H80 A8,8 0 0 1 88,32 V80 A8,8 0 0 1 80,88 H32 A8,8 0 0 1 24,80 V32 A8,8 0 0 1 32,24 Z" />
-
-    <!-- ── White calendar card ───────────────────────────────────────────── -->
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M30,22 H78 A8,8 0 0 1 86,30 V78 A8,8 0 0 1 78,86 H30 A8,8 0 0 1 22,78 V30 A8,8 0 0 1 30,22 Z" />
-
-    <!-- ── Blue header stripe ────────────────────────────────────────────── -->
-    <path
-        android:fillColor="#1565C0"
-        android:pathData="M22,30 A8,8 0 0 1 30,22 H78 A8,8 0 0 1 86,30 V44 H22 Z" />
-
-    <!-- Month-name pill (white rounded bar) -->
-    <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M32,27 H74 A3,3 0 0 1 77,30 V33 H29 V30 A3,3 0 0 1 32,27 Z" />
-
-    <!-- Sub-label pill (semi-transparent white) -->
-    <path
-        android:fillColor="#60FFFFFF"
-        android:pathData="M29,36 H54 A2,2 0 0 1 56,38 V40 H27 V38 A2,2 0 0 1 29,36 Z" />
-
-    <!-- 1 px separator between header and day grid -->
-    <path
-        android:fillColor="#E3F2FD"
-        android:pathData="M22,44 H86 V45 H22 Z" />
-
-    <!-- ── Day-of-week header dots (Mon–Fri), y = 53, r = 2.5 ───────────── -->
-    <!-- Column centres: 30, 42, 54, 66, 78  (step 12) -->
-    <path android:fillColor="#90CAF9" android:pathData="M27.5,53 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0"/>
-    <path android:fillColor="#90CAF9" android:pathData="M39.5,53 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0"/>
-    <path android:fillColor="#90CAF9" android:pathData="M51.5,53 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0"/>
-    <path android:fillColor="#90CAF9" android:pathData="M63.5,53 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0"/>
-    <path android:fillColor="#90CAF9" android:pathData="M75.5,53 a2.5,2.5 0 1,0 5,0 a2.5,2.5 0 1,0 -5,0"/>
-
-    <!-- ── Day row 1, y = 63, r = 3 ─────────────────────────────────────── -->
-    <path android:fillColor="#B0BEC5" android:pathData="M27,63 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0"/>
-    <path android:fillColor="#B0BEC5" android:pathData="M39,63 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0"/>
-    <path android:fillColor="#B0BEC5" android:pathData="M51,63 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0"/>
-    <path android:fillColor="#B0BEC5" android:pathData="M63,63 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0"/>
-    <path android:fillColor="#B0BEC5" android:pathData="M75,63 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0"/>
-
-    <!-- ── Day row 2, y = 73 — "today" highlighted at centre (x = 54) ───── -->
-    <path android:fillColor="#B0BEC5" android:pathData="M27,73 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0"/>
-    <path android:fillColor="#B0BEC5" android:pathData="M39,73 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0"/>
-    <!-- Today circle — larger, blue -->
-    <path android:fillColor="#1565C0" android:pathData="M49,73 a5,5 0 1,0 10,0 a5,5 0 1,0 -10,0"/>
-    <path android:fillColor="#B0BEC5" android:pathData="M63,73 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0"/>
-    <path android:fillColor="#B0BEC5" android:pathData="M75,73 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0"/>
-
-    <!-- ── Day row 3, y = 82 — partial (3 days) ─────────────────────────── -->
-    <path android:fillColor="#B0BEC5" android:pathData="M27,82 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0"/>
-    <path android:fillColor="#B0BEC5" android:pathData="M39,82 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0"/>
-    <path android:fillColor="#B0BEC5" android:pathData="M51,82 a3,3 0 1,0 6,0 a3,3 0 1,0 -6,0"/>
-
+        android:pathData="M54,28c-14.36,0 -26,11.64 -26,26s11.64,26 26,26 26,-11.64 26,-26 -11.64,-26 -26,-26zM54,72c-9.94,0 -18,-8.06 -18,-18s8.06,-18 18,-18 18,8.06 18,18 -8.06,18 -18,18z" />
 </vector>
