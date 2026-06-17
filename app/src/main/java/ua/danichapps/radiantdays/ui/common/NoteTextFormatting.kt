@@ -1,19 +1,23 @@
 package ua.danichapps.radiantdays.ui.common
 
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.ParagraphStyle
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextIndent
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 
 private const val BOLD_MARKER = "**"
 private const val BULLET_PREFIX = "- "
 private const val LARGE_PREFIX = "## "
 private const val SMALL_PREFIX = "###### "
-private const val DISPLAY_BULLET_PREFIX = "• "
+private const val BULLET_ANNOTATION = "note_bullet"
+private val BULLET_INDENT = 28.sp
 
 enum class NoteFontSize {
     Small,
@@ -68,11 +72,16 @@ fun noteMarkdownToFieldValue(
             if (index > 0) append('\n')
             val lineStart = length
             val structure = parseMarkdownLineStructure(line)
-            if (structure.bullet) {
-                append(DISPLAY_BULLET_PREFIX)
-            }
             appendContentWithBold(structure.content)
             val lineEnd = length
+            if (structure.bullet && lineEnd > lineStart) {
+                addStringAnnotation(BULLET_ANNOTATION, "true", lineStart, lineEnd)
+                addStyle(
+                    ParagraphStyle(textIndent = TextIndent(firstLine = BULLET_INDENT, restLine = BULLET_INDENT)),
+                    lineStart,
+                    lineEnd,
+                )
+            }
             val sizeStyle = SpanStyle(fontSize = styles.fontSizeFor(structure.size))
             if (structure.size != NoteFontSize.Normal && lineEnd > lineStart) {
                 addStyle(sizeStyle, lineStart, lineEnd)
@@ -89,11 +98,13 @@ fun noteFieldValueToMarkdown(value: TextFieldValue, styles: NoteDisplayStyles): 
     var offset = 0
     return lines.joinToString("\n") { line ->
         val lineStart = offset
-        offset += line.length + 1
+        val lineEnd = lineStart + line.length
+        offset = lineEnd + 1
         displayLineToMarkdown(
             line = line,
             annotated = value.annotatedString,
             lineStart = lineStart,
+            lineEnd = lineEnd,
             styles = styles,
         )
     }
@@ -104,10 +115,10 @@ fun noteFormatStateAt(
     styles: NoteDisplayStyles,
     boldTyping: Boolean,
 ): NoteFormatState {
-    val line = displayLineAt(value.text, value.selection.start)
+    val lineRange = lineRange(value.text, value.selection.start)
     return NoteFormatState(
         isBold = boldTyping || isSelectionBold(value),
-        isBullet = line.startsWith(DISPLAY_BULLET_PREFIX),
+        isBullet = lineHasBullet(value.annotatedString, lineRange),
         fontSize = lineFontSize(value.annotatedString, value.text, value.selection.start, styles),
     )
 }
@@ -143,13 +154,21 @@ fun applyBoldTyping(previous: TextFieldValue, current: TextFieldValue): TextFiel
 
 fun toggleBulletLine(value: TextFieldValue): TextFieldValue {
     val lineRange = lineRange(value.text, value.selection.start)
-    val line = value.text.substring(lineRange)
-    val newLine = if (line.startsWith(DISPLAY_BULLET_PREFIX)) {
-        line.removePrefix(DISPLAY_BULLET_PREFIX)
+    if (lineRange.isEmpty()) return value
+    val annotated = if (lineHasBullet(value.annotatedString, lineRange)) {
+        removeBulletFromLine(value.annotatedString, lineRange)
     } else {
-        DISPLAY_BULLET_PREFIX + line
+        buildAnnotatedString {
+            append(value.annotatedString)
+            addStringAnnotation(BULLET_ANNOTATION, "true", lineRange.first, lineRange.last + 1)
+            addStyle(
+                ParagraphStyle(textIndent = TextIndent(firstLine = BULLET_INDENT, restLine = BULLET_INDENT)),
+                lineRange.first,
+                lineRange.last + 1,
+            )
+        }
     }
-    return replaceDisplayLine(value, lineRange, newLine)
+    return value.copy(annotatedString = annotated)
 }
 
 fun setLineFontSize(
@@ -168,6 +187,28 @@ fun setLineFontSize(
         if (index in lineRange) style.copy(fontSize = targetSize) else style
     }
     return value.copy(annotatedString = annotated)
+}
+
+fun preserveSpansOnEdit(previous: TextFieldValue, incoming: TextFieldValue): TextFieldValue {
+    if (previous.text == incoming.text) {
+        return incoming.copy(
+            annotatedString = previous.annotatedString,
+            selection = incoming.selection,
+        )
+    }
+    if (previous.annotatedString.spanStyles.isEmpty() &&
+        previous.annotatedString.paragraphStyles.isEmpty() &&
+        previous.annotatedString.getStringAnnotations(0, previous.text.length).isEmpty()
+    ) {
+        return incoming
+    }
+    if (incoming.annotatedString.spanStyles.isNotEmpty() ||
+        incoming.annotatedString.paragraphStyles.isNotEmpty()
+    ) {
+        return incoming
+    }
+    val mapped = mapAnnotationsAfterEdit(previous.annotatedString, previous.text, incoming.text)
+    return incoming.copy(annotatedString = mapped)
 }
 
 fun appendVoiceTextToRichFieldValue(current: TextFieldValue, spoken: String): TextFieldValue {
@@ -247,16 +288,12 @@ private fun displayLineToMarkdown(
     line: String,
     annotated: AnnotatedString,
     lineStart: Int,
+    lineEnd: Int,
     styles: NoteDisplayStyles,
 ): String {
-    var content = line
-    val bullet = content.startsWith(DISPLAY_BULLET_PREFIX)
-    if (bullet) {
-        content = content.removePrefix(DISPLAY_BULLET_PREFIX)
-    }
-    val contentStart = lineStart + if (bullet) DISPLAY_BULLET_PREFIX.length else 0
+    val bullet = lineHasBullet(annotated, lineStart until lineEnd)
     val size = lineFontSize(annotated, line, lineStart, styles)
-    val markdownContent = serializeBoldContent(annotated, contentStart, content)
+    val markdownContent = serializeBoldContent(annotated, lineStart, line)
     return buildMarkdownLine(
         MarkdownLineStructure(
             size = size,
@@ -315,6 +352,31 @@ private fun lineFontSize(
     return styles.sizeForFontSize(fontSize)
 }
 
+private fun lineHasBullet(annotated: AnnotatedString, lineRange: IntRange): Boolean =
+    annotated.getStringAnnotations(BULLET_ANNOTATION, lineRange.first, lineRange.last + 1).isNotEmpty()
+
+private fun removeBulletFromLine(annotated: AnnotatedString, lineRange: IntRange): AnnotatedString =
+    buildAnnotatedString {
+        append(annotated.text)
+        annotated.spanStyles.forEach { span ->
+            addStyle(span.item, span.start, span.end)
+        }
+        annotated.paragraphStyles.forEach { span ->
+            val overlapsLine = span.start < lineRange.last + 1 && span.end > lineRange.first
+            if (!overlapsLine) {
+                addStyle(span.item, span.start, span.end)
+            }
+        }
+        annotated.getStringAnnotations(0, annotated.length).forEach { annotation ->
+            val onLine = annotation.tag == BULLET_ANNOTATION &&
+                annotation.start >= lineRange.first &&
+                annotation.end <= lineRange.last + 1
+            if (!onLine) {
+                addStringAnnotation(annotation.tag, annotation.item, annotation.start, annotation.end)
+            }
+        }
+    }
+
 private fun isSelectionBold(value: TextFieldValue): Boolean {
     val selection = value.selection
     if (!selection.collapsed) {
@@ -354,6 +416,65 @@ private fun toggleBoldOnRange(annotated: AnnotatedString, selection: TextRange):
     }
 }
 
+private fun mapAnnotationsAfterEdit(
+    source: AnnotatedString,
+    oldText: String,
+    newText: String,
+): AnnotatedString {
+    val prefix = oldText.commonPrefixWith(newText)
+    val suffix = oldText.commonSuffixWith(newText)
+    val editStart = prefix.length
+    val editEndOld = oldText.length - suffix.length
+    val editEndNew = newText.length - suffix.length
+    val delta = editEndNew - editEndOld
+
+    return buildAnnotatedString {
+        append(newText)
+        source.spanStyles.forEach { span ->
+            val style = span.item
+            mapRange(span.start, span.end, editStart, editEndOld, editEndNew, delta).forEach { range ->
+                val rangeStart = range.first
+                val rangeEnd = range.last + 1
+                if (rangeEnd > rangeStart) addStyle(style, rangeStart, rangeEnd)
+            }
+        }
+        source.paragraphStyles.forEach { span ->
+            val style = span.item
+            mapRange(span.start, span.end, editStart, editEndOld, editEndNew, delta).forEach { range ->
+                val rangeStart = range.first
+                val rangeEnd = range.last + 1
+                if (rangeEnd > rangeStart) addStyle(style, rangeStart, rangeEnd)
+            }
+        }
+        source.getStringAnnotations(0, source.length).forEach { annotation ->
+            mapRange(annotation.start, annotation.end, editStart, editEndOld, editEndNew, delta).forEach { range ->
+                val rangeStart = range.first
+                val rangeEnd = range.last + 1
+                if (rangeEnd > rangeStart) {
+                    addStringAnnotation(annotation.tag, annotation.item, rangeStart, rangeEnd)
+                }
+            }
+        }
+    }
+}
+
+private fun mapRange(
+    start: Int,
+    end: Int,
+    editStart: Int,
+    editEndOld: Int,
+    editEndNew: Int,
+    delta: Int,
+): List<IntRange> {
+    if (end <= editStart) return listOf(start until end)
+    if (start >= editEndOld) return listOf((start + delta) until (end + delta))
+    val ranges = mutableListOf<IntRange>()
+    if (start < editStart) ranges += start until editStart
+    ranges += editStart until editEndNew
+    if (end > editEndOld) ranges += (editEndNew + (end - editEndOld)) until (end + delta)
+    return ranges
+}
+
 private fun rebuildAnnotatedString(
     source: AnnotatedString,
     transform: (Int, SpanStyle) -> SpanStyle,
@@ -369,6 +490,12 @@ private fun rebuildAnnotatedString(
         if (style.fontWeight == FontWeight.Bold || style.fontSize != TextUnit.Unspecified) {
             addStyle(style, charStart, length)
         }
+    }
+    source.paragraphStyles.forEach { span ->
+        addStyle(span.item, span.start, span.end)
+    }
+    source.getStringAnnotations(0, source.length).forEach { annotation ->
+        addStringAnnotation(annotation.tag, annotation.item, annotation.start, annotation.end)
     }
 }
 
@@ -397,11 +524,12 @@ private fun AnnotatedString.Builder.removeBoldInRange(
             addStyle(style, end, spanEnd)
         }
     }
-}
-
-private fun displayLineAt(text: String, cursor: Int): String {
-    val range = lineRange(text, cursor)
-    return text.substring(range)
+    source.paragraphStyles.forEach { span ->
+        addStyle(span.item, span.start, span.end)
+    }
+    source.getStringAnnotations(0, source.length).forEach { annotation ->
+        addStringAnnotation(annotation.tag, annotation.item, annotation.start, annotation.end)
+    }
 }
 
 private fun lineRange(text: String, cursor: Int): IntRange {
@@ -410,64 +538,6 @@ private fun lineRange(text: String, cursor: Int): IntRange {
         .let { if (it == -1) 0 else it + 1 }
     val end = text.indexOf('\n', startIndex = clamped).let { if (it == -1) text.length else it }
     return start until end
-}
-
-private fun replaceDisplayLine(
-    value: TextFieldValue,
-    lineRange: IntRange,
-    newLine: String,
-): TextFieldValue {
-    val oldLine = value.text.substring(lineRange)
-    val annotated = buildAnnotatedString {
-        append(value.annotatedString.subSequence(0, lineRange.first))
-        val lineStart = length
-        append(newLine)
-        val lineEnd = length
-        append(value.annotatedString.subSequence(lineRange.last + 1, value.text.length))
-
-        val oldContentStart = lineRange.first +
-            if (oldLine.startsWith(DISPLAY_BULLET_PREFIX)) DISPLAY_BULLET_PREFIX.length else 0
-        val newContentStart = lineStart +
-            if (newLine.startsWith(DISPLAY_BULLET_PREFIX)) DISPLAY_BULLET_PREFIX.length else 0
-        val oldContent = oldLine.removePrefix(DISPLAY_BULLET_PREFIX)
-        val newContent = newLine.removePrefix(DISPLAY_BULLET_PREFIX)
-
-        value.annotatedString.spanStyles.forEach { span ->
-            if (span.item.fontSize != TextUnit.Unspecified &&
-                span.start < lineRange.last + 1 &&
-                span.end > lineRange.first
-            ) {
-                addStyle(SpanStyle(fontSize = span.item.fontSize), lineStart, lineEnd)
-            }
-        }
-        for (index in oldContent.indices) {
-            if (index >= newContent.length) break
-            val oldIndex = oldContentStart + index
-            val newIndex = newContentStart + index
-            val isBold = value.annotatedString.spanStyles.any { span ->
-                oldIndex in span.start until span.end &&
-                    span.item.fontWeight == FontWeight.Bold
-            }
-            if (isBold) {
-                addStyle(SpanStyle(fontWeight = FontWeight.Bold), newIndex, newIndex + 1)
-            }
-        }
-    }
-    val delta = newLine.length - oldLine.length
-    val lineStart = lineRange.first
-    val lineEnd = lineStart + newLine.length
-    val newSelection = when {
-        value.selection.collapsed -> {
-            val cursor = (value.selection.start + delta).coerceIn(lineStart, lineEnd)
-            TextRange(cursor)
-        }
-        else -> {
-            val start = (value.selection.start + delta).coerceIn(lineStart, lineEnd)
-            val end = (value.selection.end + delta).coerceIn(lineStart, lineEnd)
-            TextRange(minOf(start, end), maxOf(start, end))
-        }
-    }
-    return TextFieldValue(annotated, newSelection.clamped(annotated.length))
 }
 
 private fun TextRange.clamped(length: Int): TextRange {

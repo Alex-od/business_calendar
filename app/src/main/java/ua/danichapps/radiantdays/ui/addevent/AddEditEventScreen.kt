@@ -65,6 +65,7 @@ import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -87,6 +88,7 @@ import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.domain.model.AiAction
 import ua.danichapps.radiantdays.domain.model.Tag
 import ua.danichapps.radiantdays.locale.AppLocaleStore
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ua.danichapps.radiantdays.ui.common.ColoredTagChip
 import ua.danichapps.radiantdays.ui.common.CompactFilterChip
@@ -97,7 +99,9 @@ import ua.danichapps.radiantdays.ui.common.appendVoiceTextToRichFieldValue
 import ua.danichapps.radiantdays.ui.common.applyBoldTyping
 import ua.danichapps.radiantdays.ui.common.noteFieldValueToMarkdown
 import ua.danichapps.radiantdays.ui.common.noteMarkdownToFieldValue
+import ua.danichapps.radiantdays.ui.common.preserveSpansOnEdit
 import ua.danichapps.radiantdays.ui.common.rememberVoiceInputLauncher
+import ua.danichapps.radiantdays.ui.common.RichNoteTextField
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -351,35 +355,56 @@ private fun EventForm(
     val bodyTextStyle = typography.bodyLarge
     val noteDisplayStyles = remember(typography) {
         NoteDisplayStyles(
-            smallSize = typography.bodySmall.fontSize,
+            smallSize = typography.labelSmall.fontSize,
             normalSize = typography.bodyLarge.fontSize,
-            largeSize = typography.titleMedium.fontSize,
+            largeSize = typography.headlineSmall.fontSize,
         )
     }
 
     var showAlarmDatePicker by remember { mutableStateOf(false) }
     var showAlarmTimePicker by remember { mutableStateOf(false) }
     var boldTyping by remember { mutableStateOf(false) }
+    var isDescriptionFocused by remember { mutableStateOf(false) }
+    var forceExternalSync by remember { mutableIntStateOf(0) }
+    var localMarkdown by remember(uiState.editingEventId) { mutableStateOf(uiState.description) }
 
     var descriptionValue by remember(uiState.editingEventId) {
-        mutableStateOf(noteMarkdownToFieldValue(uiState.description, noteDisplayStyles))
-    }
-
-    LaunchedEffect(uiState.description, uiState.editingEventId) {
-        val markdown = noteFieldValueToMarkdown(descriptionValue, noteDisplayStyles)
-        if (uiState.description != markdown) {
-            descriptionValue = noteMarkdownToFieldValue(
+        mutableStateOf(
+            noteMarkdownToFieldValue(
                 markdown = uiState.description,
                 styles = noteDisplayStyles,
-                selection = descriptionValue.selection,
-            )
-            boldTyping = false
-        }
+            ),
+        )
     }
 
-    fun publishDescriptionValue(newValue: TextFieldValue) {
-        descriptionValue = newValue
-        onDescriptionChange(noteFieldValueToMarkdown(newValue, noteDisplayStyles))
+    LaunchedEffect(descriptionValue) {
+        delay(400)
+        val markdown = noteFieldValueToMarkdown(descriptionValue, noteDisplayStyles)
+        if (markdown == localMarkdown) return@LaunchedEffect
+        localMarkdown = markdown
+        onDescriptionChange(markdown)
+    }
+
+    LaunchedEffect(uiState.description, forceExternalSync) {
+        if (isDescriptionFocused && forceExternalSync == 0) return@LaunchedEffect
+        if (uiState.description == localMarkdown) {
+            forceExternalSync = 0
+            return@LaunchedEffect
+        }
+        val fieldMarkdown = noteFieldValueToMarkdown(descriptionValue, noteDisplayStyles)
+        if (uiState.description == fieldMarkdown) {
+            localMarkdown = uiState.description
+            forceExternalSync = 0
+            return@LaunchedEffect
+        }
+        localMarkdown = uiState.description
+        descriptionValue = noteMarkdownToFieldValue(
+            markdown = uiState.description,
+            styles = noteDisplayStyles,
+            selection = descriptionValue.selection,
+        )
+        boldTyping = false
+        forceExternalSync = 0
     }
 
     val voicePrompt = stringResource(R.string.event_voice_prompt)
@@ -388,7 +413,9 @@ private fun EventForm(
         prompt = voicePrompt,
         onResult = { spoken ->
             descriptionValue = appendVoiceTextToRichFieldValue(descriptionValue, spoken)
-            onDescriptionChangeFromVoice(noteFieldValueToMarkdown(descriptionValue, noteDisplayStyles))
+            val markdown = noteFieldValueToMarkdown(descriptionValue, noteDisplayStyles)
+            localMarkdown = markdown
+            onDescriptionChangeFromVoice(markdown)
         },
         onUnavailable = onVoiceInputUnavailable,
     )
@@ -422,7 +449,10 @@ private fun EventForm(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(
-                onClick = onDescriptionUndo,
+                onClick = {
+                    onDescriptionUndo()
+                    forceExternalSync++
+                },
                 enabled = uiState.canUndoDescription,
             ) {
                 Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = stringResource(R.string.action_undo))
@@ -442,7 +472,7 @@ private fun EventForm(
             }
             IconButton(
                 onClick = onAiClick,
-                enabled = uiState.description.isNotBlank(),
+                enabled = descriptionValue.text.isNotBlank(),
             ) {
                 Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.ai_chat_assistant))
             }
@@ -450,27 +480,28 @@ private fun EventForm(
 
         NoteFormatToolbar(
             value = descriptionValue,
-            onValueChange = ::publishDescriptionValue,
+            onValueChange = { descriptionValue = it },
             styles = noteDisplayStyles,
             boldTyping = boldTyping,
             onBoldTypingChange = { boldTyping = it },
         )
 
-        TextField(
+        RichNoteTextField(
             value = descriptionValue,
+            onFocusChange = { isDescriptionFocused = it },
             onValueChange = { newValue ->
+                val preserved = preserveSpansOnEdit(descriptionValue, newValue)
                 val processed = if (boldTyping) {
-                    applyBoldTyping(descriptionValue, newValue)
+                    applyBoldTyping(descriptionValue, preserved)
                 } else {
-                    newValue
+                    preserved
                 }
-                publishDescriptionValue(processed)
+                descriptionValue = processed
             },
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
             textStyle = bodyTextStyle,
-            colors = borderlessTextFieldColors(),
             minLines = 10,
         )
 
