@@ -15,9 +15,10 @@ class AppStrings(context: Context) {
 
     fun settingsKeyRemoved(): String = appContext.getString(R.string.settings_snackbar_key_removed)
 
-    fun settingsAiConnected(): String = appContext.getString(R.string.settings_ai_status_connected)
+    fun settingsApiCheckFailedTitle(): String =
+        appContext.getString(R.string.settings_api_check_failed_title)
 
-    fun settingsAiStub(): String = appContext.getString(R.string.settings_ai_status_stub)
+    fun settingsAiConnected(): String = appContext.getString(R.string.settings_ai_status_connected)
 
     fun aiStubResponse(preview: String): String =
         appContext.getString(R.string.ai_stub_response, preview)

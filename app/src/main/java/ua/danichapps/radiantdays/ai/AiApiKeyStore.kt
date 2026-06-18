@@ -6,10 +6,13 @@ class AiApiKeyStore(context: Context) {
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-    fun getKey(): String? = prefs.getString(KEY_OPENAI_API, null)
+    fun getKey(): String? =
+        prefs.getString(KEY_OPENAI_API, null)
+            ?.let(AiApiKeySanitizer::sanitize)
+            ?.takeIf { it.isNotEmpty() }
 
     fun saveKey(key: String) {
-        prefs.edit().putString(KEY_OPENAI_API, key.trim()).apply()
+        prefs.edit().putString(KEY_OPENAI_API, AiApiKeySanitizer.sanitize(key)).apply()
     }
 
     fun clearKey() {

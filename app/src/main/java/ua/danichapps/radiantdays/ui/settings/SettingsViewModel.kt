@@ -11,15 +11,14 @@ import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ua.danichapps.radiantdays.ai.AiApiKeyStore
+import ua.danichapps.radiantdays.ai.AiModels
 import ua.danichapps.radiantdays.locale.AppLocaleManager
 import ua.danichapps.radiantdays.locale.AppLocaleStore
-import ua.danichapps.radiantdays.locale.AppStrings
 
 class SettingsViewModel(
     private val apiKeyStore: AiApiKeyStore,
     private val localeStore: AppLocaleStore,
     private val localeManager: AppLocaleManager,
-    private val appStrings: AppStrings,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -29,24 +28,8 @@ class SettingsViewModel(
     val events: Flow<SettingsUiEvent> = _events.receiveAsFlow()
 
     init {
-        refreshStatus()
-    }
-
-    fun onApiKeyChange(value: String) {
-        _uiState.update { it.copy(apiKeyInput = value) }
-    }
-
-    fun onToggleApiKeySection() {
-        _uiState.update { it.copy(isApiKeySectionExpanded = !it.isApiKeySectionExpanded) }
-    }
-
-    fun onModelSelected(id: String) {
-        if (id == _uiState.value.selectedModelId) return
-        apiKeyStore.saveModelId(id)
-        _uiState.update { it.copy(selectedModelId = apiKeyStore.getModelId()) }
-        viewModelScope.launch {
-            _events.send(SettingsUiEvent.ShowSnackbar(appStrings.settingsModelChanged()))
-        }
+        refreshLanguage()
+        refreshAiSummary()
     }
 
     fun onLanguageSelected(tag: String?) {
@@ -59,58 +42,16 @@ class SettingsViewModel(
         }
     }
 
-    fun saveApiKey() {
-        val key = _uiState.value.apiKeyInput.trim()
-        if (key.isBlank()) {
-            viewModelScope.launch {
-                _events.send(SettingsUiEvent.ShowSnackbar(appStrings.settingsEnterApiKey()))
-            }
-            return
+    fun refreshAiSummary() {
+        val modelDisplayName = if (apiKeyStore.hasKey()) {
+            AiModels.findById(apiKeyStore.getModelId())?.displayName
+        } else {
+            null
         }
-        apiKeyStore.saveKey(key)
-        _uiState.update {
-            it.copy(
-                apiKeyInput = "",
-                isKeySaved = true,
-                aiStatus = AiConnectionStatus.CONNECTED,
-                isApiKeySectionExpanded = false,
-            )
-        }
-        viewModelScope.launch {
-            _events.send(SettingsUiEvent.ShowSnackbar(appStrings.settingsKeySaved()))
-        }
+        _uiState.update { it.copy(aiModelDisplayName = modelDisplayName) }
     }
 
-    fun clearApiKey() {
-        apiKeyStore.clearKey()
-        _uiState.update {
-            it.copy(
-                apiKeyInput = "",
-                isKeySaved = false,
-                aiStatus = AiConnectionStatus.STUB,
-                isApiKeySectionExpanded = false,
-            )
-        }
-        viewModelScope.launch {
-            _events.send(SettingsUiEvent.ShowSnackbar(appStrings.settingsKeyRemoved()))
-        }
+    private fun refreshLanguage() {
+        _uiState.update { it.copy(selectedLanguageTag = localeStore.getTag()) }
     }
-
-    private fun refreshStatus() {
-        val saved = apiKeyStore.hasKey()
-        _uiState.update {
-            it.copy(
-                apiKeyInput = "",
-                isKeySaved = saved,
-                aiStatus = if (saved) AiConnectionStatus.CONNECTED else AiConnectionStatus.STUB,
-                selectedModelId = apiKeyStore.getModelId(),
-                selectedLanguageTag = localeStore.getTag(),
-            )
-        }
-    }
-}
-
-enum class AiConnectionStatus {
-    STUB,
-    CONNECTED,
 }

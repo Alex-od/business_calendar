@@ -3,8 +3,10 @@ package ua.danichapps.radiantdays.di
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 import ua.danichapps.radiantdays.ai.AiApiKeyStore
+import ua.danichapps.radiantdays.ai.OpenAiCompletionClientFactory
 import ua.danichapps.radiantdays.ai.RadiantAiCompletionClientProvider
 import ua.danichapps.radiantdays.ai.createAiOkHttpClient
+import ua.danichapps.radiantdays.domain.repository.AiCompletionClientFactory
 import ua.danichapps.radiantdays.domain.repository.AiCompletionClientProvider
 import ua.danichapps.radiantdays.locale.AppLocaleManager
 import ua.danichapps.radiantdays.locale.AppLocaleStore
@@ -17,6 +19,7 @@ import ua.danichapps.radiantdays.sync.WebSocketBridgeClient
 import ua.danichapps.radiantdays.ui.addevent.AddEditEventViewModel
 import ua.danichapps.radiantdays.ui.aiactions.AiActionsViewModel
 import ua.danichapps.radiantdays.ui.calendar.CalendarViewModel
+import ua.danichapps.radiantdays.ui.settings.AiSettingsViewModel
 import ua.danichapps.radiantdays.ui.settings.SettingsViewModel
 import ua.danichapps.radiantdays.ui.tags.TagSettingsViewModel
 import ua.danichapps.radiantdays.ui.tagnotes.TagNotesViewModel
@@ -48,6 +51,7 @@ val presentationModule = module {
             widgetUpdater = get(),
             errorStrings = get(),
             localeStore = get(),
+            apiKeyStore = get(),
         )
     }
 
@@ -56,7 +60,15 @@ val presentationModule = module {
             apiKeyStore = get(),
             localeStore = get(),
             localeManager = get(),
+        )
+    }
+
+    viewModel {
+        AiSettingsViewModel(
+            apiKeyStore = get(),
             appStrings = get(),
+            validateAiApiKeyUseCase = get(),
+            errorStrings = get(),
         )
     }
 
@@ -102,6 +114,7 @@ val presentationModule = module {
     single { AppLocaleManager() }
     single { DomainErrorStrings(get()) }
     single { AppStrings(get()) }
+    single<AiCompletionClientFactory> { OpenAiCompletionClientFactory(okHttpClient = get()) }
     single<AiCompletionClientProvider> {
         RadiantAiCompletionClientProvider(keyStore = get(), okHttpClient = get(), appStrings = get())
     }

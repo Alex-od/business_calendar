@@ -1,14 +1,16 @@
 package ua.danichapps.radiantdays.ui.settings
 
-import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItem
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -17,11 +19,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
-import ua.danichapps.radiantdays.locale.AppLanguageOption
+import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.locale.AppLanguages
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AppLanguageSelector(
     selectedTag: String?,
@@ -31,36 +31,35 @@ fun AppLanguageSelector(
     val selectedOption = AppLanguages.findByTag(selectedTag) ?: AppLanguages.all.first()
     var expanded by remember { mutableStateOf(false) }
 
-    ListItem(
-        headlineContent = { Text(stringResource(ua.danichapps.radiantdays.R.string.settings_section_language)) },
-        supportingContent = { Text(stringResource(ua.danichapps.radiantdays.R.string.settings_language_summary)) },
-    )
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { expanded = it },
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .padding(bottom = 12.dp),
-    ) {
-        OutlinedTextField(
-            value = stringResource(selectedOption.labelRes),
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(stringResource(ua.danichapps.radiantdays.R.string.settings_section_language)) },
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+    Box(modifier = modifier.fillMaxWidth()) {
+        ListItem(
             modifier = Modifier
                 .fillMaxWidth()
-                .menuAnchor(),
+                .clickable { expanded = true },
+            headlineContent = { Text(stringResource(R.string.settings_section_language)) },
+            supportingContent = { Text(stringResource(selectedOption.labelRes)) },
+            leadingContent = {
+                Icon(
+                    Icons.Default.Language,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
+            trailingContent = {
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            },
         )
-        ExposedDropdownMenu(
+        DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false },
         ) {
             AppLanguages.all.forEach { option ->
-                LanguageMenuItem(
-                    option = option,
+                DropdownMenuItem(
+                    text = { Text(stringResource(option.labelRes)) },
                     onClick = {
                         expanded = false
                         onLanguageSelected(option.tag)
@@ -69,21 +68,4 @@ fun AppLanguageSelector(
             }
         }
     }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun LanguageMenuItem(
-    option: AppLanguageOption,
-    onClick: () -> Unit,
-) {
-    DropdownMenuItem(
-        text = {
-            Column {
-                Text(stringResource(option.labelRes))
-            }
-        },
-        onClick = onClick,
-        contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding,
-    )
 }

@@ -8,7 +8,21 @@ class DomainErrorStrings(context: Context) {
 
     private val appContext = context.applicationContext
 
-    fun resolve(key: MessageKey, args: List<String> = emptyList()): String {
+    fun resolve(key: MessageKey, args: List<String> = emptyList(), cause: Throwable? = null): String {
+        if (key == MessageKey.AI_HTTP_ERROR) {
+            val code = args.getOrNull(0).orEmpty()
+            val detail = args.getOrNull(1).orEmpty().trim()
+            val base = appContext.getString(R.string.error_ai_http_error, code)
+            return if (detail.isBlank()) base else "$base\n$detail"
+        }
+        if (key == MessageKey.AI_REQUEST_FAILED) {
+            val hint = humanizeAiFailureDetail(args.getOrNull(0).orEmpty())
+            return if (hint.isBlank()) {
+                appContext.getString(R.string.error_ai_request_failed)
+            } else {
+                appContext.getString(R.string.error_ai_request_failed_with_detail, hint)
+            }
+        }
         val resId = when (key) {
             MessageKey.UNKNOWN -> R.string.error_unknown
             MessageKey.TAG_NAME_REQUIRED -> R.string.error_tag_name_required
@@ -37,11 +51,51 @@ class DomainErrorStrings(context: Context) {
             MessageKey.AI_EMPTY_RESPONSE -> R.string.error_ai_empty_response
             MessageKey.AI_TIMEOUT -> R.string.error_ai_timeout
             MessageKey.AI_REQUEST_FAILED -> R.string.error_ai_request_failed
+            MessageKey.AI_NO_NETWORK -> R.string.error_ai_no_network
+            MessageKey.AI_MODEL_NOT_FOUND -> R.string.error_ai_model_not_found
+            MessageKey.AI_RATE_LIMIT -> R.string.error_ai_rate_limit
+            MessageKey.AI_SERVER_ERROR -> R.string.error_ai_server_error
+            MessageKey.AI_PARSE_ERROR -> R.string.error_ai_parse_error
+            MessageKey.AI_TLS_ERROR -> R.string.error_ai_tls_error
         }
-        return if (args.isEmpty()) {
+        val effectiveArgs = when (key) {
+            MessageKey.AI_HTTP_ERROR -> httpErrorArgs(args)
+            else -> args
+        }
+        return if (effectiveArgs.isEmpty()) {
             appContext.getString(resId)
         } else {
-            appContext.getString(resId, *args.toTypedArray())
+            appContext.getString(resId, *effectiveArgs.toTypedArray())
+        }
+    }
+
+    private fun httpErrorArgs(args: List<String>): List<String> {
+        val code = args.getOrNull(0).orEmpty()
+        val detail = args.getOrNull(1).orEmpty()
+        if (detail.isBlank()) return listOf(code)
+        return listOf(code, detail)
+    }
+
+    private fun humanizeAiFailureDetail(raw: String): String {
+        val detail = raw.trim()
+        if (detail.isBlank()) return ""
+        val lower = detail.lowercase()
+        return when {
+            lower.contains("unexpected char") || lower.contains("authorization value") ->
+                appContext.getString(R.string.error_ai_invalid_api_key)
+            lower.contains("trust anchor") || lower.contains("cert path") || lower.contains("certificate") ->
+                appContext.getString(R.string.error_ai_hint_certificate)
+            lower.contains("handshake") || lower.contains("ssl") ->
+                appContext.getString(R.string.error_ai_hint_ssl)
+            lower.contains("unable to resolve host") || lower.contains("unknown host") ->
+                appContext.getString(R.string.error_ai_hint_dns)
+            lower.contains("timeout") || lower.contains("timed out") ->
+                appContext.getString(R.string.error_ai_hint_timeout)
+            lower.contains("connection reset") ||
+                lower.contains("failed to connect") ||
+                lower.contains("econnrefused") ->
+                appContext.getString(R.string.error_ai_hint_connection)
+            else -> appContext.getString(R.string.error_ai_hint_technical, detail.take(120))
         }
     }
 }
