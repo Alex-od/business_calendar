@@ -6,12 +6,14 @@ import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,8 +22,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.wrapContentHeight
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -31,18 +31,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.AlarmAdd
-import androidx.compose.material.icons.filled.AlarmOff
-import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -105,7 +100,6 @@ import ua.danichapps.radiantdays.ui.common.rememberVoiceInputLauncher
 import ua.danichapps.radiantdays.ui.common.RichNoteTextField
 import java.text.SimpleDateFormat
 import java.util.Calendar
-import java.util.Date
 
 /**
  * Shared screen for adding a new event and editing an existing one.
@@ -211,7 +205,6 @@ fun AddEditEventScreen(
             onDescriptionUndo = viewModel::onDescriptionUndo,
             onAlarmTimeChange = viewModel::onAlarmTimeChange,
             onNotificationMinutesChange = viewModel::onNotificationMinutesChange,
-            onIsCompletedChange = viewModel::onIsCompletedChange,
             onAddAlarm = { requestAlarmWithPermission() },
             onRemoveAlarm = viewModel::onRemoveAlarmClick,
             onAiClick = viewModel::onAiButtonClick,
@@ -354,7 +347,6 @@ private fun EventForm(
     onDescriptionUndo: () -> Unit,
     onAlarmTimeChange: (Long) -> Unit,
     onNotificationMinutesChange: (Int) -> Unit,
-    onIsCompletedChange: (Boolean) -> Unit,
     onAddAlarm: () -> Unit,
     onRemoveAlarm: () -> Unit,
     onAiClick: () -> Unit,
@@ -442,132 +434,110 @@ private fun EventForm(
     )
 
     val inChatMode = uiState.aiChatMessages.isNotEmpty()
+    val horizontalPadding = if (inChatMode) 8.dp else 16.dp
 
-    Column(
+    AlarmReminderDrawer(
         modifier = modifier
             .fillMaxSize()
             .then(if (!inChatMode) Modifier.imePadding() else Modifier)
-            .padding(
-                horizontal = if (inChatMode) 8.dp else 16.dp,
-                vertical = if (inChatMode) 8.dp else 16.dp,
-            ),
+            .padding(vertical = horizontalPadding),
+        alarmTimeMillis = uiState.alarmTimeMillis,
+        notificationMinutesBefore = uiState.notificationMinutesBefore,
+        startTimeMillis = uiState.startTimeMillis,
+        dateFormat = dateFormat,
+        timeFormat = timeFormat,
+        onAddAlarm = onAddAlarm,
+        onRemoveAlarm = onRemoveAlarm,
+        onDateClick = { showAlarmDatePicker = true },
+        onTimeClick = { showAlarmTimePicker = true },
+        onPresetAlarm = onAlarmTimeChange,
+        onNotificationMinutesChange = onNotificationMinutesChange,
     ) {
-        uiState.alarmTimeMillis?.let { alarmTimeMillis ->
-            ReminderSection(
-                alarmTimeMillis = alarmTimeMillis,
-                notificationMinutesBefore = uiState.notificationMinutesBefore,
-                startTimeMillis = uiState.startTimeMillis,
-                isCompleted = uiState.isCompleted,
-                dateFormat = dateFormat,
-                timeFormat = timeFormat,
-                onDateClick = { showAlarmDatePicker = true },
-                onTimeClick = { showAlarmTimePicker = true },
-                onPresetAlarm = onAlarmTimeChange,
-                onNotificationMinutesChange = onNotificationMinutesChange,
-                onIsCompletedChange = onIsCompletedChange,
-            )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = horizontalPadding),
+        ) {
+            if (!inChatMode) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    IconButton(
+                        onClick = {
+                            onDescriptionUndo()
+                            forceExternalSync++
+                        },
+                        enabled = uiState.canUndoDescription,
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = stringResource(R.string.action_undo))
+                    }
+                    Spacer(Modifier.weight(1f))
+                    IconButton(onClick = startVoiceInput) {
+                        Icon(Icons.Default.Mic, contentDescription = stringResource(R.string.event_voice_input))
+                    }
+                    IconButton(
+                        onClick = onAiClick,
+                        enabled = uiState.isAiKeySaved && descriptionValue.text.isNotBlank(),
+                    ) {
+                        Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.ai_chat_assistant))
+                    }
+                }
+            }
 
-            Spacer(Modifier.height(12.dp))
-        }
+            if (inChatMode) {
+                InlineAiChatSection(
+                    messages = uiState.aiChatMessages,
+                    noteDescription = uiState.description,
+                    loading = uiState.aiChatLoading,
+                    onSend = onAiChatSend,
+                    onMessageEdit = onAiChatMessageEdit,
+                    onMessageDelete = onAiChatMessageDelete,
+                    onReplace = onAiChatReplace,
+                    onAppend = onAiChatAppend,
+                    onMessageCopied = onAiChatMessageCopied,
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                )
+            } else {
+                NoteFormatToolbar(
+                    value = descriptionValue,
+                    onValueChange = { descriptionValue = it },
+                    styles = noteDisplayStyles,
+                    boldTyping = boldTyping,
+                    onBoldTypingChange = { boldTyping = it },
+                )
 
-        if (!inChatMode) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                IconButton(
-                    onClick = {
-                        onDescriptionUndo()
-                        forceExternalSync++
+                RichNoteTextField(
+                    value = descriptionValue,
+                    onFocusChange = { isDescriptionFocused = it },
+                    onValueChange = { newValue ->
+                        val preserved = preserveSpansOnEdit(descriptionValue, newValue)
+                        val processed = if (boldTyping) {
+                            applyBoldTyping(descriptionValue, preserved)
+                        } else {
+                            preserved
+                        }
+                        descriptionValue = processed
                     },
-                    enabled = uiState.canUndoDescription,
-                ) {
-                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = stringResource(R.string.action_undo))
-                }
-                Spacer(Modifier.weight(1f))
-                IconButton(onClick = startVoiceInput) {
-                    Icon(Icons.Default.Mic, contentDescription = stringResource(R.string.event_voice_input))
-                }
-                if (uiState.alarmTimeMillis == null) {
-                    IconButton(onClick = onAddAlarm) {
-                        Icon(Icons.Default.AlarmAdd, contentDescription = stringResource(R.string.event_add_alarm))
-                    }
-                } else {
-                    IconButton(onClick = onRemoveAlarm) {
-                        Icon(Icons.Default.AlarmOff, contentDescription = stringResource(R.string.event_remove_alarm))
-                    }
-                }
-                IconButton(
-                    onClick = onAiClick,
-                    enabled = uiState.isAiKeySaved && descriptionValue.text.isNotBlank(),
-                ) {
-                    Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.ai_chat_assistant))
-                }
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxWidth(),
+                    textStyle = bodyTextStyle,
+                    minLines = 10,
+                )
             }
-        } else if (uiState.alarmTimeMillis == null) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End,
-            ) {
-                IconButton(onClick = onAddAlarm) {
-                    Icon(Icons.Default.AlarmAdd, contentDescription = stringResource(R.string.event_add_alarm))
-                }
+
+            if (uiState.descriptionError != null) {
+                Text(
+                    text = uiState.descriptionError,
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
             }
         }
-
-        if (inChatMode) {
-            InlineAiChatSection(
-                messages = uiState.aiChatMessages,
-                noteDescription = uiState.description,
-                loading = uiState.aiChatLoading,
-                onSend = onAiChatSend,
-                onMessageEdit = onAiChatMessageEdit,
-                onMessageDelete = onAiChatMessageDelete,
-                onReplace = onAiChatReplace,
-                onAppend = onAiChatAppend,
-                onMessageCopied = onAiChatMessageCopied,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-            )
-        } else {
-            NoteFormatToolbar(
-                value = descriptionValue,
-                onValueChange = { descriptionValue = it },
-                styles = noteDisplayStyles,
-                boldTyping = boldTyping,
-                onBoldTypingChange = { boldTyping = it },
-            )
-
-            RichNoteTextField(
-                value = descriptionValue,
-                onFocusChange = { isDescriptionFocused = it },
-                onValueChange = { newValue ->
-                    val preserved = preserveSpansOnEdit(descriptionValue, newValue)
-                    val processed = if (boldTyping) {
-                        applyBoldTyping(descriptionValue, preserved)
-                    } else {
-                        preserved
-                    }
-                    descriptionValue = processed
-                },
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                textStyle = bodyTextStyle,
-                minLines = 10,
-            )
-        }
-
-        if (uiState.descriptionError != null) {
-            Text(
-                text = uiState.descriptionError,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.padding(top = 4.dp),
-            )
-        }
-
     }
 
     val alarmTimeMillis = uiState.alarmTimeMillis
@@ -614,103 +584,6 @@ private fun EventForm(
             title = { Text(stringResource(R.string.event_alarm_time_title)) },
             text = { TimePicker(state) },
         )
-    }
-}
-
-@Composable
-private fun ReminderSection(
-    alarmTimeMillis: Long,
-    notificationMinutesBefore: Int,
-    startTimeMillis: Long,
-    isCompleted: Boolean,
-    dateFormat: SimpleDateFormat,
-    timeFormat: SimpleDateFormat,
-    onDateClick: () -> Unit,
-    onTimeClick: () -> Unit,
-    onPresetAlarm: (Long) -> Unit,
-    onNotificationMinutesChange: (Int) -> Unit,
-    onIsCompletedChange: (Boolean) -> Unit,
-) {
-    val fireMillis = reminderFireTimeMillis(alarmTimeMillis, notificationMinutesBefore)
-
-    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Alarm, contentDescription = null)
-            Column(Modifier.padding(start = 8.dp)) {
-                Text(stringResource(R.string.event_reminder), style = MaterialTheme.typography.titleSmall)
-                val pushDateStr = dateFormat.format(Date(fireMillis))
-                val pushTimeStr = timeFormat.format(Date(fireMillis))
-                Text(
-                    text = stringResource(R.string.event_reminder_push, pushDateStr, pushTimeStr),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            TextButton(onClick = onDateClick) {
-                Text(dateFormat.format(Date(alarmTimeMillis)))
-            }
-            TextButton(onClick = onTimeClick) {
-                Text(timeFormat.format(Date(alarmTimeMillis)))
-            }
-        }
-        Text(stringResource(R.string.event_quick_pick), style = MaterialTheme.typography.labelMedium)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            item {
-                FilterChip(
-                    selected = false,
-                    onClick = { onPresetAlarm(millisPlusMinutes(System.currentTimeMillis(), 15)) },
-                    label = { Text(stringResource(R.string.event_preset_15_min)) },
-                )
-            }
-            item {
-                FilterChip(
-                    selected = false,
-                    onClick = { onPresetAlarm(millisPlusHours(System.currentTimeMillis(), 1)) },
-                    label = { Text(stringResource(R.string.event_preset_1_hour)) },
-                )
-            }
-            item {
-                FilterChip(
-                    selected = false,
-                    onClick = { onPresetAlarm(tomorrowAtNineMillis()) },
-                    label = { Text(stringResource(R.string.event_preset_tomorrow_9)) },
-                )
-            }
-            item {
-                FilterChip(
-                    selected = false,
-                    onClick = { onPresetAlarm(noteDayAtNineMillis(startTimeMillis)) },
-                    label = { Text(stringResource(R.string.event_preset_note_day_9)) },
-                )
-            }
-        }
-        Text(stringResource(R.string.event_minutes_before), style = MaterialTheme.typography.labelMedium)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(REMINDER_OFFSET_MINUTES_OPTIONS) { minutes ->
-                FilterChip(
-                    selected = notificationMinutesBefore == minutes,
-                    onClick = { onNotificationMinutesChange(minutes) },
-                    label = {
-                        Text(
-                            if (minutes == 0) {
-                                stringResource(R.string.event_on_time)
-                            } else {
-                                stringResource(R.string.event_minutes_short, minutes)
-                            },
-                        )
-                    },
-                )
-            }
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Checkbox(checked = isCompleted, onCheckedChange = onIsCompletedChange)
-            Text(stringResource(R.string.event_completed), style = MaterialTheme.typography.bodyLarge)
-        }
     }
 }
 

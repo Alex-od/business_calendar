@@ -74,6 +74,7 @@
     <string name="event_reminder">Напоминание</string>
     <string name="event_reminder_push">Push: %1$s %2$s</string>
     <string name="event_quick_pick">Быстрый выбор</string>
+    <string name="event_quick_pick_hint">Выбрать</string>
     <string name="event_preset_15_min">+15 мин</string>
     <string name="event_preset_1_hour">+1 ч</string>
     <string name="event_preset_tomorrow_9">Завтра 9:00</string>
