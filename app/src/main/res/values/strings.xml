@@ -73,12 +73,6 @@
     <string name="event_continue_chat">Continue chat</string>
     <string name="event_reminder">Reminder</string>
     <string name="event_reminder_push">Push: %1$s %2$s</string>
-    <string name="event_quick_pick">Quick pick</string>
-    <string name="event_quick_pick_hint">Select</string>
-    <string name="event_preset_15_min">+15 min</string>
-    <string name="event_preset_1_hour">+1 h</string>
-    <string name="event_preset_tomorrow_9">Tomorrow 9:00</string>
-    <string name="event_preset_note_day_9">Note day 9:00</string>
     <string name="event_minutes_before">Minutes before reminder</string>
     <string name="event_on_time">On time</string>
     <string name="event_minutes_short">%1$d min</string>

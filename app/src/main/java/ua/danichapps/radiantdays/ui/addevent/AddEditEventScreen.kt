@@ -443,14 +443,12 @@ private fun EventForm(
             .padding(vertical = horizontalPadding),
         alarmTimeMillis = uiState.alarmTimeMillis,
         notificationMinutesBefore = uiState.notificationMinutesBefore,
-        startTimeMillis = uiState.startTimeMillis,
         dateFormat = dateFormat,
         timeFormat = timeFormat,
         onAddAlarm = onAddAlarm,
         onRemoveAlarm = onRemoveAlarm,
         onDateClick = { showAlarmDatePicker = true },
         onTimeClick = { showAlarmTimePicker = true },
-        onPresetAlarm = onAlarmTimeChange,
         onNotificationMinutesChange = onNotificationMinutesChange,
     ) {
         Column(

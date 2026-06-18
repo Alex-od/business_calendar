@@ -45,14 +45,12 @@ private val AlarmDrawerWidth = 280.dp
 fun AlarmReminderDrawer(
     alarmTimeMillis: Long?,
     notificationMinutesBefore: Int,
-    startTimeMillis: Long,
     dateFormat: SimpleDateFormat,
     timeFormat: SimpleDateFormat,
     onAddAlarm: () -> Unit,
     onRemoveAlarm: () -> Unit,
     onDateClick: () -> Unit,
     onTimeClick: () -> Unit,
-    onPresetAlarm: (Long) -> Unit,
     onNotificationMinutesChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
@@ -77,14 +75,12 @@ fun AlarmReminderDrawer(
                         AlarmSidePanel(
                             alarmTimeMillis = alarmTimeMillis,
                             notificationMinutesBefore = notificationMinutesBefore,
-                            startTimeMillis = startTimeMillis,
                             dateFormat = dateFormat,
                             timeFormat = timeFormat,
                             onAddAlarm = onAddAlarm,
                             onRemoveAlarm = onRemoveAlarm,
                             onDateClick = onDateClick,
                             onTimeClick = onTimeClick,
-                            onPresetAlarm = onPresetAlarm,
                             onNotificationMinutesChange = onNotificationMinutesChange,
                             modifier = Modifier.fillMaxHeight(),
                         )
@@ -104,14 +100,12 @@ fun AlarmReminderDrawer(
 private fun AlarmSidePanel(
     alarmTimeMillis: Long?,
     notificationMinutesBefore: Int,
-    startTimeMillis: Long,
     dateFormat: SimpleDateFormat,
     timeFormat: SimpleDateFormat,
     onAddAlarm: () -> Unit,
     onRemoveAlarm: () -> Unit,
     onDateClick: () -> Unit,
     onTimeClick: () -> Unit,
-    onPresetAlarm: (Long) -> Unit,
     onNotificationMinutesChange: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -140,28 +134,6 @@ private fun AlarmSidePanel(
                     Text(timeFormat.format(java.util.Date(alarmMillis)))
                 }
             }
-
-            var quickPickExpanded by remember { mutableStateOf(false) }
-            AlarmDropdownField(
-                label = stringResource(R.string.event_quick_pick),
-                value = stringResource(R.string.event_quick_pick_hint),
-                expanded = quickPickExpanded,
-                onExpandedChange = { quickPickExpanded = it },
-                options = listOf(
-                    stringResource(R.string.event_preset_15_min) to {
-                        onPresetAlarm(millisPlusMinutes(System.currentTimeMillis(), 15))
-                    },
-                    stringResource(R.string.event_preset_1_hour) to {
-                        onPresetAlarm(millisPlusHours(System.currentTimeMillis(), 1))
-                    },
-                    stringResource(R.string.event_preset_tomorrow_9) to {
-                        onPresetAlarm(tomorrowAtNineMillis())
-                    },
-                    stringResource(R.string.event_preset_note_day_9) to {
-                        onPresetAlarm(noteDayAtNineMillis(startTimeMillis))
-                    },
-                ),
-            )
 
             var minutesExpanded by remember { mutableStateOf(false) }
             val minutesLabel = if (notificationMinutesBefore == 0) {
