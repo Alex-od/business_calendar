@@ -7,6 +7,7 @@ import ua.danichapps.radiantdays.domain.usecase.AddEventUseCase
 import ua.danichapps.radiantdays.domain.usecase.DeleteAiActionUseCase
 import ua.danichapps.radiantdays.domain.usecase.DeleteEventUseCase
 import ua.danichapps.radiantdays.domain.usecase.DeleteTagUseCase
+import ua.danichapps.radiantdays.domain.usecase.EnsureBuiltinAiActionsUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetAiActionsUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetEventsByTagUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetEventsForDayUseCase
@@ -21,6 +22,7 @@ import ua.danichapps.radiantdays.domain.usecase.RunAiActionUseCase
 import ua.danichapps.radiantdays.domain.usecase.UpdateAiActionUseCase
 import ua.danichapps.radiantdays.domain.usecase.UpdateEventUseCase
 import ua.danichapps.radiantdays.domain.usecase.UpdateTagUseCase
+import ua.danichapps.radiantdays.domain.usecase.ValidateAiApiKeyUseCase
 
 val domainModule = module {
     factory { GetEventsForDayUseCase(get()) }
@@ -37,10 +39,12 @@ val domainModule = module {
     factory { DeleteTagUseCase(get()) }
     factory { GetAiActionsUseCase(get()) }
     factory { GetVisibleAiActionsUseCase(get()) }
+    factory { EnsureBuiltinAiActionsUseCase(get()) }
     factory { AddAiActionUseCase(get()) }
     factory { UpdateAiActionUseCase(get()) }
     factory { DeleteAiActionUseCase(get()) }
     factory { ReorderAiActionsUseCase(get()) }
     factory { RunAiActionUseCase(get(), get()) }
     factory { ContinueAiChatUseCase(get()) }
+    factory { ValidateAiApiKeyUseCase(get()) }
 }

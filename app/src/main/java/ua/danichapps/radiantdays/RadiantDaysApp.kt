@@ -20,6 +20,7 @@ import ua.danichapps.radiantdays.notification.AlarmScheduler
 import ua.danichapps.radiantdays.notification.EventNotificationManager
 import ua.danichapps.radiantdays.notification.ReminderFallbackWorker
 import ua.danichapps.radiantdays.sync.WebSocketBridgeClient
+import ua.danichapps.radiantdays.domain.usecase.EnsureBuiltinAiActionsUseCase
 
 /**
  * Application entry point.
@@ -84,6 +85,7 @@ class RadiantDaysApp : Application() {
         ReminderFallbackWorker.schedule(this)
         CoroutineScope(SupervisorJob() + Dispatchers.IO).launch {
             getKoin().get<AlarmScheduler>().rescheduleAll()
+            getKoin().get<EnsureBuiltinAiActionsUseCase>()()
         }
     }
 

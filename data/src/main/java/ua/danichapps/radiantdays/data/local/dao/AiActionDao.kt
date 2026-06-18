@@ -35,6 +35,9 @@ interface AiActionDao {
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insertAction(action: AiActionEntity)
 
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun insertActions(actions: List<AiActionEntity>)
+
     @Update
     suspend fun updateAction(action: AiActionEntity): Int
 

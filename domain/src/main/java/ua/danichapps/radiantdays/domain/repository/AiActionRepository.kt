@@ -25,4 +25,6 @@ interface AiActionRepository {
     suspend fun deleteAction(guid: String): DomainResult<Unit>
 
     suspend fun reorderActions(orderedGuids: List<String>): DomainResult<Unit>
+
+    suspend fun ensureBuiltinActions()
 }

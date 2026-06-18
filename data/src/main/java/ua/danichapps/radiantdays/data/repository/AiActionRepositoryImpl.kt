@@ -5,6 +5,7 @@ import kotlinx.coroutines.flow.map
 import ua.danichapps.radiantdays.data.local.dao.AiActionDao
 import ua.danichapps.radiantdays.data.local.entity.AiActionEntity
 import ua.danichapps.radiantdays.data.local.mapper.toDomain
+import ua.danichapps.radiantdays.data.local.seed.BuiltinAiActions
 import ua.danichapps.radiantdays.data.local.mapper.toEntity
 import ua.danichapps.radiantdays.domain.model.AiAction
 import ua.danichapps.radiantdays.domain.model.DomainResult
@@ -77,4 +78,8 @@ class AiActionRepositoryImpl(
             onSuccess = { DomainResult.Success(Unit) },
             onFailure = { DomainResult.Error(it) },
         )
+
+    override suspend fun ensureBuiltinActions() {
+        dao.insertActions(BuiltinAiActions.all)
+    }
 }
