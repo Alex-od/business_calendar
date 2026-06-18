@@ -81,6 +81,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import org.koin.androidx.compose.koinViewModel
 import org.koin.compose.koinInject
@@ -91,8 +92,8 @@ import ua.danichapps.radiantdays.locale.AppLocaleStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ua.danichapps.radiantdays.ui.common.ColoredTagChip
-import ua.danichapps.radiantdays.ui.common.CompactFilterChip
 import ua.danichapps.radiantdays.ui.common.TagChipSpacing
+import ua.danichapps.radiantdays.ui.common.TagOverflowRow
 import ua.danichapps.radiantdays.ui.common.NoteDisplayStyles
 import ua.danichapps.radiantdays.ui.common.NoteFormatToolbar
 import ua.danichapps.radiantdays.ui.common.appendVoiceTextToRichFieldValue
@@ -122,12 +123,16 @@ fun AddEditEventScreen(
     onNavigateBack: () -> Unit,
     onOpenTags: () -> Unit,
     onOpenAiActions: () -> Unit = {},
-    onOpenAiChat: () -> Unit = {},
     createdTagGuid: String? = null,
     onCreatedTagGuidConsumed: () -> Unit = {},
     viewModel: AddEditEventViewModel = koinViewModel(),
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LifecycleResumeEffect(Unit) {
+        viewModel.refreshAiKeyStatus()
+        onPauseOrDispose { }
+    }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -140,10 +145,8 @@ fun AddEditEventScreen(
         viewModel.events.collect { event ->
             when (event) {
                 is AddEditEventUiEvent.NavigateBack -> onNavigateBack()
-                is AddEditEventUiEvent.NavigateToAiChat -> onOpenAiChat()
                 is AddEditEventUiEvent.ShowError    -> snackbarHostState.showSnackbar(event.message)
                 is AddEditEventUiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                is AddEditEventUiEvent.NavigateBackFromAiChat -> Unit
             }
         }
     }
@@ -212,6 +215,18 @@ fun AddEditEventScreen(
             onAddAlarm = { requestAlarmWithPermission() },
             onRemoveAlarm = viewModel::onRemoveAlarmClick,
             onAiClick = viewModel::onAiButtonClick,
+            onAiChatSend = viewModel::onAiChatSend,
+            onAiChatMessageEdit = viewModel::onAiChatMessageEdit,
+            onAiChatMessageDelete = viewModel::onAiChatMessageDelete,
+            onAiChatReplace = viewModel::onAiChatReplace,
+            onAiChatAppend = viewModel::onAiChatAppend,
+            onAiChatMessageCopied = {
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        context.getString(R.string.chat_message_copied),
+                    )
+                }
+            },
             onVoiceInputUnavailable = {
                 scope.launch {
                     snackbarHostState.showSnackbar(voiceUnavailableMessage)
@@ -343,6 +358,12 @@ private fun EventForm(
     onAddAlarm: () -> Unit,
     onRemoveAlarm: () -> Unit,
     onAiClick: () -> Unit,
+    onAiChatSend: (String) -> Unit,
+    onAiChatMessageEdit: (Int, String) -> Unit,
+    onAiChatMessageDelete: (Int) -> Unit,
+    onAiChatReplace: () -> Unit,
+    onAiChatAppend: () -> Unit,
+    onAiChatMessageCopied: () -> Unit,
     onVoiceInputUnavailable: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -420,11 +441,16 @@ private fun EventForm(
         onUnavailable = onVoiceInputUnavailable,
     )
 
+    val inChatMode = uiState.aiChatMessages.isNotEmpty()
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .imePadding()
-            .padding(16.dp),
+            .then(if (!inChatMode) Modifier.imePadding() else Modifier)
+            .padding(
+                horizontal = if (inChatMode) 8.dp else 16.dp,
+                vertical = if (inChatMode) 8.dp else 16.dp,
+            ),
     ) {
         uiState.alarmTimeMillis?.let { alarmTimeMillis ->
             ReminderSection(
@@ -444,66 +470,94 @@ private fun EventForm(
             Spacer(Modifier.height(12.dp))
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(
-                onClick = {
-                    onDescriptionUndo()
-                    forceExternalSync++
-                },
-                enabled = uiState.canUndoDescription,
+        if (!inChatMode) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = stringResource(R.string.action_undo))
+                IconButton(
+                    onClick = {
+                        onDescriptionUndo()
+                        forceExternalSync++
+                    },
+                    enabled = uiState.canUndoDescription,
+                ) {
+                    Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = stringResource(R.string.action_undo))
+                }
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = startVoiceInput) {
+                    Icon(Icons.Default.Mic, contentDescription = stringResource(R.string.event_voice_input))
+                }
+                if (uiState.alarmTimeMillis == null) {
+                    IconButton(onClick = onAddAlarm) {
+                        Icon(Icons.Default.AlarmAdd, contentDescription = stringResource(R.string.event_add_alarm))
+                    }
+                } else {
+                    IconButton(onClick = onRemoveAlarm) {
+                        Icon(Icons.Default.AlarmOff, contentDescription = stringResource(R.string.event_remove_alarm))
+                    }
+                }
+                IconButton(
+                    onClick = onAiClick,
+                    enabled = uiState.isAiKeySaved && descriptionValue.text.isNotBlank(),
+                ) {
+                    Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.ai_chat_assistant))
+                }
             }
-            Spacer(Modifier.weight(1f))
-            IconButton(onClick = startVoiceInput) {
-                Icon(Icons.Default.Mic, contentDescription = stringResource(R.string.event_voice_input))
-            }
-            if (uiState.alarmTimeMillis == null) {
+        } else if (uiState.alarmTimeMillis == null) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
                 IconButton(onClick = onAddAlarm) {
                     Icon(Icons.Default.AlarmAdd, contentDescription = stringResource(R.string.event_add_alarm))
                 }
-            } else {
-                IconButton(onClick = onRemoveAlarm) {
-                    Icon(Icons.Default.AlarmOff, contentDescription = stringResource(R.string.event_remove_alarm))
-                }
-            }
-            IconButton(
-                onClick = onAiClick,
-                enabled = descriptionValue.text.isNotBlank(),
-            ) {
-                Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.ai_chat_assistant))
             }
         }
 
-        NoteFormatToolbar(
-            value = descriptionValue,
-            onValueChange = { descriptionValue = it },
-            styles = noteDisplayStyles,
-            boldTyping = boldTyping,
-            onBoldTypingChange = { boldTyping = it },
-        )
+        if (inChatMode) {
+            InlineAiChatSection(
+                messages = uiState.aiChatMessages,
+                noteDescription = uiState.description,
+                loading = uiState.aiChatLoading,
+                onSend = onAiChatSend,
+                onMessageEdit = onAiChatMessageEdit,
+                onMessageDelete = onAiChatMessageDelete,
+                onReplace = onAiChatReplace,
+                onAppend = onAiChatAppend,
+                onMessageCopied = onAiChatMessageCopied,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+            )
+        } else {
+            NoteFormatToolbar(
+                value = descriptionValue,
+                onValueChange = { descriptionValue = it },
+                styles = noteDisplayStyles,
+                boldTyping = boldTyping,
+                onBoldTypingChange = { boldTyping = it },
+            )
 
-        RichNoteTextField(
-            value = descriptionValue,
-            onFocusChange = { isDescriptionFocused = it },
-            onValueChange = { newValue ->
-                val preserved = preserveSpansOnEdit(descriptionValue, newValue)
-                val processed = if (boldTyping) {
-                    applyBoldTyping(descriptionValue, preserved)
-                } else {
-                    preserved
-                }
-                descriptionValue = processed
-            },
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-            textStyle = bodyTextStyle,
-            minLines = 10,
-        )
+            RichNoteTextField(
+                value = descriptionValue,
+                onFocusChange = { isDescriptionFocused = it },
+                onValueChange = { newValue ->
+                    val preserved = preserveSpansOnEdit(descriptionValue, newValue)
+                    val processed = if (boldTyping) {
+                        applyBoldTyping(descriptionValue, preserved)
+                    } else {
+                        preserved
+                    }
+                    descriptionValue = processed
+                },
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                textStyle = bodyTextStyle,
+                minLines = 10,
+            )
+        }
 
         if (uiState.descriptionError != null) {
             Text(
@@ -707,18 +761,15 @@ private fun TagQuickAccessSection(
     modifier: Modifier = Modifier,
 ) {
     val selectedTags = tags.filter { it.guid in selectedTagGuids }
-    val pinnedUnselectedTags = tags.filter { it.isPinned && it.guid !in selectedTagGuids }
-    val otherUnselectedTags = tags.filter { !it.isPinned && it.guid !in selectedTagGuids }
-    val hasMoreTags = otherUnselectedTags.isNotEmpty()
+    val unselectedTags = tags.filter { it.guid !in selectedTagGuids }
+        .sortedWith(compareByDescending<Tag> { it.isPinned }.thenBy { it.name })
     val selectedListState = rememberLazyListState()
-    val unselectedListState = rememberLazyListState()
     val tagGuids = tags.map { it.guid }
 
     LaunchedEffect(selectedTagGuids, tagGuids) {
         if (selectedTags.isNotEmpty()) {
             selectedListState.scrollToItem(0)
         }
-        unselectedListState.scrollToItem(0)
     }
 
     Column(
@@ -750,63 +801,16 @@ private fun TagQuickAccessSection(
                 }
             }
         }
-        LazyRow(
-            state = unselectedListState,
-            horizontalArrangement = Arrangement.spacedBy(TagChipSpacing.BetweenTags),
+        TagOverflowRow(
+            tags = unselectedTags,
+            tagsExpanded = tagsExpanded,
+            onTagToggle = onTagToggle,
+            onTagsExpandedToggle = onTagsExpandedToggle,
+            onOpenTags = onOpenTags,
             modifier = Modifier
                 .fillMaxWidth()
                 .wrapContentHeight(),
-        ) {
-            items(
-                items = pinnedUnselectedTags,
-                key = { tag -> tag.guid },
-            ) { tag ->
-                ColoredTagChip(
-                    name = if (tag.isUntaggedFilter) {
-                        stringResource(R.string.tag_untagged)
-                    } else {
-                        tag.name
-                    },
-                    color = tag.color,
-                    selected = false,
-                    onClick = { onTagToggle(tag.guid) },
-                )
-            }
-            if (tagsExpanded) {
-                items(
-                    items = otherUnselectedTags,
-                    key = { tag -> tag.guid },
-                ) { tag ->
-                    ColoredTagChip(
-                        name = if (tag.isUntaggedFilter) {
-                            stringResource(R.string.tag_untagged)
-                        } else {
-                            tag.name
-                        },
-                        color = tag.color,
-                        selected = false,
-                        onClick = { onTagToggle(tag.guid) },
-                    )
-                }
-            }
-            item(key = "tag_actions") {
-                Row(horizontalArrangement = Arrangement.spacedBy(TagChipSpacing.BetweenActionButtons)) {
-                    if (hasMoreTags) {
-                        CompactFilterChip(
-                            selected = tagsExpanded,
-                            onClick = onTagsExpandedToggle,
-                            label = { Text(stringResource(R.string.action_more)) },
-                        )
-                    }
-                    CompactFilterChip(
-                        selected = false,
-                        onClick = onOpenTags,
-                        contentPadding = TagChipSpacing.AddButtonContentPadding,
-                        label = { Text("+") },
-                    )
-                }
-            }
-        }
+        )
     }
 }
 

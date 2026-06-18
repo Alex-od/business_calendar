@@ -23,6 +23,7 @@
     <string name="action_pin">Закріпити</string>
     <string name="action_drag">Перетягнути</string>
     <string name="action_more">Ще</string>
+    <string name="action_copy">Копіювати</string>
 
     <!-- Calendar -->
     <string name="calendar_add_event">Додати подію</string>
@@ -36,25 +37,20 @@
     <!-- Settings -->
     <string name="settings_title">Налаштування</string>
     <string name="settings_section_language">Мова</string>
-    <string name="settings_language_summary">Мова інтерфейсу застосунку</string>
     <string name="settings_section_ai">Штучний інтелект</string>
-    <string name="settings_section_organization">Організація</string>
     <string name="settings_tags">Теги</string>
-    <string name="settings_tags_summary">Кольори та назви тегів</string>
     <string name="settings_openai_api_key">OpenAI API Key</string>
     <string name="settings_api_key_hint">Ключ з platform.openai.com/api-keys</string>
-    <string name="settings_api_connected">Підключено</string>
-    <string name="settings_api_stub">Заглушка</string>
+    <string name="settings_api_not_added">Не додано</string>
     <string name="settings_ai_actions">AI-дії</string>
-    <string name="settings_ai_actions_summary">Промпти та порядок дій</string>
     <string name="settings_model">Модель</string>
     <string name="settings_selected_model">Обрана модель</string>
     <string name="settings_snackbar_model_changed">Модель змінено</string>
     <string name="settings_snackbar_enter_api_key">Введіть API-ключ</string>
-    <string name="settings_snackbar_key_saved">Ключ збережено</string>
+    <string name="settings_snackbar_key_saved">Ключ збережено, API працює</string>
     <string name="settings_snackbar_key_removed">Ключ видалено</string>
-    <string name="settings_ai_status_connected">OpenAI підключено</string>
-    <string name="settings_ai_status_stub">AI працює в режимі заглушки</string>
+    <string name="settings_api_check_failed_title">Перевірка API-ключа</string>
+    <string name="settings_ai_status_connected">Підключено</string>
 
     <!-- Tags -->
     <string name="tag_settings_title">Теги</string>
@@ -114,6 +110,7 @@
     <string name="ai_chat_message">Повідомлення</string>
     <string name="ai_chat_you">Ви</string>
     <string name="ai_chat_assistant">AI</string>
+    <string name="chat_message_copied">Скопійовано</string>
 
     <!-- Note format toolbar -->
     <string name="note_format_bold">Жирний</string>
@@ -159,9 +156,22 @@
     <string name="error_load_ai_actions_failed">Не вдалося завантажити AI-дії</string>
     <string name="error_load_notes_failed">Не вдалося завантажити нотатки</string>
     <string name="error_note_not_found">Нотатку не знайдено</string>
-    <string name="error_ai_invalid_api_key">Невірний API-ключ. Перевірте Налаштування</string>
-    <string name="error_ai_http_error">Помилка OpenAI %1$d: %2$s</string>
-    <string name="error_ai_empty_response">Порожня відповідь від OpenAI</string>
-    <string name="error_ai_timeout">Перевищено час очікування відповіді AI (%1$d с). Спробуйте ще раз</string>
-    <string name="error_ai_request_failed">Не вдалося виконати AI-запит</string>
+    <string name="error_ai_invalid_api_key">Невірний API-ключ. Скопіюйте його з platform.openai.com без пробілів і переносів рядка</string>
+    <string name="error_ai_http_error">OpenAI відхилив запит (HTTP %1$s)</string>
+    <string name="error_ai_empty_response">OpenAI повернув порожню відповідь</string>
+    <string name="error_ai_timeout">OpenAI не відповів за %1$s с</string>
+    <string name="error_ai_request_failed">Не вдалося зв\'язатися з OpenAI</string>
+    <string name="error_ai_request_failed_with_detail">%1$s</string>
+    <string name="error_ai_no_network">Немає підключення до інтернету</string>
+    <string name="error_ai_model_not_found">Модель %1$s недоступна. Оберіть іншу модель нижче</string>
+    <string name="error_ai_rate_limit">Перевищено ліміт запитів OpenAI. Спробуйте пізніше</string>
+    <string name="error_ai_server_error">Сервер OpenAI тимчасово недоступний</string>
+    <string name="error_ai_parse_error">OpenAI повернув некоректну відповідь</string>
+    <string name="error_ai_tls_error">Помилка захищеного з\'єднання. Перевірте інтернет, дату та час на пристрої</string>
+    <string name="error_ai_hint_certificate">Пристрій не довіряє сертифікату OpenAI. Перевірте дату та час</string>
+    <string name="error_ai_hint_ssl">Не вдалося встановити захищене з\'єднання з OpenAI. Перевірте дату та час</string>
+    <string name="error_ai_hint_dns">Не вдалося знайти сервер OpenAI. Перевірте інтернет</string>
+    <string name="error_ai_hint_timeout">Сервер OpenAI не відповів вчасно</string>
+    <string name="error_ai_hint_connection">З\'єднання з OpenAI перервано. Перевірте інтернет</string>
+    <string name="error_ai_hint_technical">%1$s</string>
 </resources>

@@ -2,6 +2,7 @@ package ua.danichapps.radiantdays.ai
 
 import ua.danichapps.radiantdays.domain.model.AiChatMessage
 import ua.danichapps.radiantdays.domain.model.AiChatRole
+import ua.danichapps.radiantdays.domain.model.textForApi
 import ua.danichapps.radiantdays.domain.model.DomainResult
 import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.repository.AiCompletionClient
@@ -11,7 +12,7 @@ class StubAiCompletionClient(
     private val appStrings: AppStrings,
 ) : AiCompletionClient {
     override suspend fun completeConversation(messages: List<AiChatMessage>): DomainResult<String> {
-        val lastUserMessage = messages.lastOrNull { it.role == AiChatRole.USER }?.content
+        val lastUserMessage = messages.lastOrNull { it.role == AiChatRole.USER }?.textForApi()
             ?: return DomainResult.Error(
                 IllegalArgumentException("No user message"),
                 MessageKey.CHAT_MESSAGE_REQUIRED,

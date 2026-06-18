@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import ua.danichapps.radiantdays.domain.model.AiChatMessage
 import ua.danichapps.radiantdays.domain.model.AiChatRole
+import ua.danichapps.radiantdays.domain.model.normalizeFirstUserMessage
 import ua.danichapps.radiantdays.domain.model.AiNoteContext
 import ua.danichapps.radiantdays.domain.model.CalendarEvent
 import ua.danichapps.radiantdays.domain.model.MessageKey
@@ -27,6 +28,7 @@ import ua.danichapps.radiantdays.domain.usecase.GetTagsUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetVisibleAiActionsUseCase
 import ua.danichapps.radiantdays.domain.usecase.RunAiActionUseCase
 import ua.danichapps.radiantdays.domain.usecase.UpdateEventUseCase
+import ua.danichapps.radiantdays.ai.AiApiKeyStore
 import ua.danichapps.radiantdays.locale.AppLocaleStore
 import ua.danichapps.radiantdays.locale.DomainErrorStrings
 import ua.danichapps.radiantdays.notification.AlarmScheduler
@@ -50,6 +52,7 @@ class AddEditEventViewModel(
     private val widgetUpdater: CalendarWidgetUpdater,
     private val errorStrings: DomainErrorStrings,
     private val localeStore: AppLocaleStore,
+    private val apiKeyStore: AiApiKeyStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddEditEventUiState())
@@ -66,11 +69,17 @@ class AddEditEventViewModel(
     private var isUndoingDescription = false
 
     init {
+        refreshAiKeyStatus()
         observeTags()
         observeVisibleAiActions()
     }
 
+    fun refreshAiKeyStatus() {
+        _uiState.update { it.copy(isAiKeySaved = apiKeyStore.hasKey()) }
+    }
+
     fun onAiButtonClick() {
+        if (!_uiState.value.isAiKeySaved) return
         if (_uiState.value.description.isBlank()) return
         _uiState.update { it.copy(aiSheetVisible = true) }
     }
@@ -95,41 +104,71 @@ class AddEditEventViewModel(
             )
             runAiActionUseCase(actionGuid, context)
                 .onSuccess { result ->
+                    val actionName = state.visibleAiActions
+                        .firstOrNull { action -> action.guid == actionGuid }
+                        ?.name
                     _uiState.update {
                         it.copy(
                             aiLoading = false,
                             aiResultText = result.response,
                             aiChatMessages = listOf(
-                                AiChatMessage(AiChatRole.USER, result.resolvedPrompt),
+                                AiChatMessage(
+                                    role = AiChatRole.USER,
+                                    content = state.description,
+                                    apiContent = result.resolvedPrompt,
+                                    actionLabel = actionName,
+                                ),
                                 AiChatMessage(AiChatRole.ASSISTANT, result.response),
                             ),
                         )
                     }
+                    scheduleAutoSave()
                 }
-                .onError { _, key, args ->
+                .onError { exception, key, args ->
                     _uiState.update { it.copy(aiLoading = false) }
-                    _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args)))
+                    _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args, exception)))
                 }
         }
     }
 
     fun onAiResultDismiss() {
         _uiState.update { it.copy(aiResultText = null, aiChatMessages = emptyList()) }
+        scheduleAutoSave()
     }
 
     fun onAiResultContinueChat() {
         if (_uiState.value.aiChatMessages.isEmpty()) return
         _uiState.update { it.copy(aiResultText = null) }
-        viewModelScope.launch {
-            _events.send(AddEditEventUiEvent.NavigateToAiChat)
-        }
+        scheduleAutoSave()
     }
 
-    fun onAiChatDismiss() {
-        _uiState.update { it.copy(aiChatMessages = emptyList(), aiChatLoading = false) }
-        viewModelScope.launch {
-            _events.send(AddEditEventUiEvent.NavigateBackFromAiChat)
+    fun onAiChatMessageEdit(index: Int, content: String) {
+        val messages = _uiState.value.aiChatMessages
+        if (index !in messages.indices) return
+        val current = messages[index]
+        if (current.content == content) return
+        _uiState.update { state ->
+            state.copy(
+                aiChatMessages = messages.mapIndexed { i, message ->
+                    if (i == index) {
+                        message.copy(content = content, apiContent = message.apiContent, actionLabel = message.actionLabel)
+                    } else {
+                        message
+                    }
+                },
+            )
         }
+        scheduleAutoSave()
+    }
+
+    fun onAiChatMessageDelete(index: Int) {
+        if (_uiState.value.aiChatLoading) return
+        val messages = _uiState.value.aiChatMessages
+        if (index !in messages.indices) return
+        _uiState.update { state ->
+            state.copy(aiChatMessages = messages.filterIndexed { i, _ -> i != index })
+        }
+        scheduleAutoSave()
     }
 
     fun onAiChatSend(message: String) {
@@ -155,15 +194,16 @@ class AddEditEventViewModel(
                                 AiChatMessage(AiChatRole.ASSISTANT, response),
                         )
                     }
+                    scheduleAutoSave()
                 }
-                .onError { _, key, args ->
+                .onError { exception, key, args ->
                     _uiState.update { state ->
                         state.copy(
                             aiChatLoading = false,
                             aiChatMessages = state.aiChatMessages.dropLast(1),
                         )
                     }
-                    _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args)))
+                    _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args, exception)))
                 }
         }
     }
@@ -171,7 +211,6 @@ class AddEditEventViewModel(
     fun onAiChatReplace() {
         val result = latestAssistantMessage() ?: return
         applyDiscreteDescriptionChange(result)
-        clearAiChatAndNavigateBack()
     }
 
     fun onAiChatAppend() {
@@ -183,23 +222,16 @@ class AddEditEventViewModel(
             else -> " "
         }
         applyDiscreteDescriptionChange(current + separator + result)
-        clearAiChatAndNavigateBack()
     }
 
     private fun latestAssistantMessage(): String? =
         _uiState.value.aiChatMessages.lastOrNull { it.role == AiChatRole.ASSISTANT }?.content
 
-    private fun clearAiChatAndNavigateBack() {
-        _uiState.update { it.copy(aiChatMessages = emptyList(), aiChatLoading = false) }
-        viewModelScope.launch {
-            _events.send(AddEditEventUiEvent.NavigateBackFromAiChat)
-        }
-    }
-
     fun onAiResultReplace() {
         val result = _uiState.value.aiResultText ?: return
         applyDiscreteDescriptionChange(result)
-        onAiResultDismiss()
+        _uiState.update { it.copy(aiResultText = null) }
+        scheduleAutoSave()
     }
 
     fun onAiResultAppend() {
@@ -211,7 +243,8 @@ class AddEditEventViewModel(
             else -> " "
         }
         applyDiscreteDescriptionChange(current + separator + result)
-        onAiResultDismiss()
+        _uiState.update { it.copy(aiResultText = null) }
+        scheduleAutoSave()
     }
 
     fun loadEvent(id: Long) {
@@ -220,6 +253,7 @@ class AddEditEventViewModel(
             val event = repository.getEventById(id)
             if (event != null) {
                 clearDescriptionUndo()
+                val chatMessages = event.aiChatMessages.normalizeFirstUserMessage(event.description)
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -231,9 +265,13 @@ class AddEditEventViewModel(
                         alarmTimeMillis = event.alarmTimeMillis,
                         isCompleted = event.isCompleted,
                         selectedTagGuids = event.tagGuids,
+                        aiChatMessages = chatMessages,
                         createdAtMillis = event.createdAtMillis,
                         updatedAtMillis = event.updatedAtMillis,
                     )
+                }
+                if (chatMessages != event.aiChatMessages) {
+                    scheduleAutoSave()
                 }
             } else {
                 _uiState.update { it.copy(isLoading = false) }
@@ -434,7 +472,7 @@ class AddEditEventViewModel(
     }
 
     private suspend fun performSave(state: AddEditEventUiState) {
-        if (state.title.isBlank() && state.description.isBlank()) return
+        if (state.title.isBlank() && state.description.isBlank() && state.aiChatMessages.isEmpty()) return
         val event = buildEvent(state)
         if (state.editingEventId != null) {
             updateEventUseCase(event)
@@ -453,8 +491,8 @@ class AddEditEventViewModel(
                     }
                     widgetUpdater.refresh()
                 }
-                .onError { _, key, args ->
-                    _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args)))
+                .onError { exception, key, args ->
+                    _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args, exception)))
                 }
         } else {
             addEventUseCase(event)
@@ -473,8 +511,8 @@ class AddEditEventViewModel(
                     }
                     widgetUpdater.refresh()
                 }
-                .onError { _, key, args ->
-                    _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args)))
+                .onError { exception, key, args ->
+                    _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args, exception)))
                 }
         }
     }
@@ -490,6 +528,7 @@ class AddEditEventViewModel(
         alarmTimeMillis = state.alarmTimeMillis,
         isCompleted = state.isCompleted,
         tagGuids = state.selectedTagGuids,
+        aiChatMessages = state.aiChatMessages,
     )
 
     private fun observeTags() {

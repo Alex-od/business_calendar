@@ -32,4 +32,6 @@ data class AddEditEventUiState(
     val aiChatLoading: Boolean = false,
 
     val canUndoDescription: Boolean = false,
+
+    val isAiKeySaved: Boolean = false,
 )

@@ -9,16 +9,18 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import ua.danichapps.radiantdays.domain.model.AiChatMessage
 import ua.danichapps.radiantdays.domain.model.AiChatRole
+import ua.danichapps.radiantdays.domain.model.textForApi
 import ua.danichapps.radiantdays.domain.model.DomainResult
 import ua.danichapps.radiantdays.domain.model.MessageKey
 import ua.danichapps.radiantdays.domain.repository.AiCompletionClient
 import java.io.IOException
-import java.net.SocketTimeoutException
+import org.json.JSONException
 
 class OpenAiCompletionClient(
     private val apiKey: String,
     private val model: String,
     private val okHttpClient: OkHttpClient,
+    private val apiUrl: String = DEFAULT_API_URL,
 ) : AiCompletionClient {
 
     override suspend fun completeConversation(messages: List<AiChatMessage>): DomainResult<String> =
@@ -29,7 +31,7 @@ class OpenAiCompletionClient(
                     messagesArray.put(
                         JSONObject()
                             .put("role", message.role.toApiRole())
-                            .put("content", message.content),
+                            .put("content", message.textForApi()),
                     )
                 }
 
@@ -39,7 +41,7 @@ class OpenAiCompletionClient(
                     .toString()
 
                 val request = Request.Builder()
-                    .url(API_URL)
+                    .url(apiUrl)
                     .addHeader("Authorization", "Bearer $apiKey")
                     .addHeader("Content-Type", "application/json")
                     .post(body.toRequestBody(JSON_MEDIA_TYPE))
@@ -48,12 +50,21 @@ class OpenAiCompletionClient(
                 okHttpClient.newCall(request).execute().use { response ->
                     val responseBody = response.body?.string().orEmpty()
                     if (response.code == 401) {
-                        throw OpenAiException(MessageKey.AI_INVALID_API_KEY)
+                        throw AiCompletionErrorMapper.OpenAiException(MessageKey.AI_INVALID_API_KEY)
+                    }
+                    if (response.code == 404) {
+                        throw AiCompletionErrorMapper.OpenAiException(MessageKey.AI_MODEL_NOT_FOUND, listOf(model))
+                    }
+                    if (response.code == 429) {
+                        throw AiCompletionErrorMapper.OpenAiException(MessageKey.AI_RATE_LIMIT)
+                    }
+                    if (response.code >= 500) {
+                        throw AiCompletionErrorMapper.OpenAiException(MessageKey.AI_SERVER_ERROR)
                     }
                     if (!response.isSuccessful) {
-                        throw OpenAiException(
+                        throw AiCompletionErrorMapper.OpenAiException(
                             MessageKey.AI_HTTP_ERROR,
-                            listOf(response.code.toString(), responseBody),
+                            listOf(response.code.toString(), extractErrorDetail(responseBody)),
                         )
                     }
                     val parsed = JSONObject(responseBody)
@@ -64,49 +75,31 @@ class OpenAiCompletionClient(
                         .getString("content")
                         .trim()
                     if (content.isBlank()) {
-                        throw OpenAiException(MessageKey.AI_EMPTY_RESPONSE)
+                        throw AiCompletionErrorMapper.OpenAiException(MessageKey.AI_EMPTY_RESPONSE)
                     }
                     content
                 }
             }.fold(
                 onSuccess = { DomainResult.Success(it) },
-                onFailure = { throwable -> mapFailure(throwable) },
+                onFailure = { throwable -> AiCompletionErrorMapper.mapFailure(throwable) },
             )
         }
+
+    private fun extractErrorDetail(responseBody: String): String {
+        val parsedMessage = runCatching {
+            JSONObject(responseBody).optJSONObject("error")?.optString("message")?.trim()
+        }.getOrNull()?.takeIf { it.isNotEmpty() }
+        return parsedMessage?.take(DETAIL_MAX_LENGTH).orEmpty()
+    }
 
     private fun AiChatRole.toApiRole(): String = when (this) {
         AiChatRole.USER -> "user"
         AiChatRole.ASSISTANT -> "assistant"
     }
 
-    private fun mapFailure(throwable: Throwable): DomainResult.Error {
-        if (throwable is OpenAiException) {
-            return DomainResult.Error(throwable, throwable.messageKey, throwable.messageArgs)
-        }
-        if (throwable is SocketTimeoutException || throwable.cause is SocketTimeoutException) {
-            return DomainResult.Error(
-                throwable,
-                MessageKey.AI_TIMEOUT,
-                listOf(AI_HTTP_READ_TIMEOUT_SECONDS.toString()),
-            )
-        }
-        if (throwable is IOException && throwable.message.orEmpty().contains("timeout", ignoreCase = true)) {
-            return DomainResult.Error(
-                throwable,
-                MessageKey.AI_TIMEOUT,
-                listOf(AI_HTTP_READ_TIMEOUT_SECONDS.toString()),
-            )
-        }
-        return DomainResult.Error(throwable, MessageKey.AI_REQUEST_FAILED)
-    }
-
-    private class OpenAiException(
-        val messageKey: MessageKey,
-        val messageArgs: List<String> = emptyList(),
-    ) : Exception(messageKey.name)
-
     private companion object {
-        const val API_URL = "https://api.openai.com/v1/chat/completions"
+        const val DEFAULT_API_URL = "https://api.openai.com/v1/chat/completions"
+        const val DETAIL_MAX_LENGTH = 200
         val JSON_MEDIA_TYPE = "application/json".toMediaType()
     }
 }

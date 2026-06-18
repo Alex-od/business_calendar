@@ -8,12 +8,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import org.koin.androidx.compose.koinViewModel
 import ua.danichapps.radiantdays.ui.addevent.AddEditEventScreen
-import ua.danichapps.radiantdays.ui.addevent.AddEditEventViewModel
-import ua.danichapps.radiantdays.ui.aichat.AiChatScreen
 import ua.danichapps.radiantdays.ui.calendar.CalendarScreen
 import ua.danichapps.radiantdays.ui.aiactions.AiActionsScreen
+import ua.danichapps.radiantdays.ui.settings.AiSettingsScreen
 import ua.danichapps.radiantdays.ui.settings.SettingsScreen
 import ua.danichapps.radiantdays.ui.tags.TagSettingsScreen
 import ua.danichapps.radiantdays.ui.tagnotes.TagNotesScreen
@@ -55,8 +53,15 @@ fun AppNavigation(
         composable(Screen.Settings.route) {
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onOpenAiActions = { navController.navigate(Screen.AiActions.route) },
+                onOpenAiSettings = { navController.navigate(Screen.AiSettings.route) },
                 onOpenTags = { navController.navigate(Screen.TagSettings.createRoute()) },
+            )
+        }
+
+        composable(Screen.AiSettings.route) {
+            AiSettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onOpenAiActions = { navController.navigate(Screen.AiActions.route) },
             )
         }
 
@@ -128,7 +133,6 @@ fun AppNavigation(
                 onNavigateBack = { navController.popBackStack() },
                 onOpenTags = { navController.navigate(Screen.TagSettings.createRoute(returnAfterCreate = true)) },
                 onOpenAiActions = { navController.navigate(Screen.AiActions.route) },
-                onOpenAiChat = { navController.navigate(Screen.AiChat.route) },
                 createdTagGuid = createdTagGuid.value,
                 onCreatedTagGuidConsumed = {
                     backStack.savedStateHandle[Screen.TagSettings.RESULT_CREATED_TAG_GUID] = null
@@ -154,20 +158,10 @@ fun AppNavigation(
                 onNavigateBack = { navController.popBackStack() },
                 onOpenTags = { navController.navigate(Screen.TagSettings.createRoute(returnAfterCreate = true)) },
                 onOpenAiActions = { navController.navigate(Screen.AiActions.route) },
-                onOpenAiChat = { navController.navigate(Screen.AiChat.route) },
                 createdTagGuid = createdTagGuid.value,
                 onCreatedTagGuidConsumed = {
                     backStack.savedStateHandle[Screen.TagSettings.RESULT_CREATED_TAG_GUID] = null
                 },
-            )
-        }
-
-        composable(Screen.AiChat.route) {
-            val parentEntry = navController.previousBackStackEntry ?: return@composable
-            val viewModel: AddEditEventViewModel = koinViewModel(viewModelStoreOwner = parentEntry)
-            AiChatScreen(
-                onNavigateBack = { navController.popBackStack() },
-                viewModel = viewModel,
             )
         }
     }

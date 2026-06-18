@@ -23,6 +23,7 @@
     <string name="action_pin">Pin</string>
     <string name="action_drag">Drag</string>
     <string name="action_more">More</string>
+    <string name="action_copy">Copy</string>
 
     <!-- Calendar -->
     <string name="calendar_add_event">Add event</string>
@@ -36,25 +37,20 @@
     <!-- Settings -->
     <string name="settings_title">Settings</string>
     <string name="settings_section_language">Language</string>
-    <string name="settings_language_summary">App display language</string>
     <string name="settings_section_ai">Artificial intelligence</string>
-    <string name="settings_section_organization">Organization</string>
     <string name="settings_tags">Tags</string>
-    <string name="settings_tags_summary">Tag colors and names</string>
     <string name="settings_openai_api_key">OpenAI API Key</string>
     <string name="settings_api_key_hint">Key from platform.openai.com/api-keys</string>
-    <string name="settings_api_connected">Connected</string>
-    <string name="settings_api_stub">Stub</string>
+    <string name="settings_api_not_added">Not added</string>
     <string name="settings_ai_actions">AI actions</string>
-    <string name="settings_ai_actions_summary">Prompts and action order</string>
     <string name="settings_model">Model</string>
     <string name="settings_selected_model">Selected model</string>
     <string name="settings_snackbar_model_changed">Model changed</string>
     <string name="settings_snackbar_enter_api_key">Enter API key</string>
-    <string name="settings_snackbar_key_saved">Key saved</string>
+    <string name="settings_snackbar_key_saved">Key saved, API is working</string>
     <string name="settings_snackbar_key_removed">Key removed</string>
-    <string name="settings_ai_status_connected">OpenAI connected</string>
-    <string name="settings_ai_status_stub">AI is running in stub mode</string>
+    <string name="settings_api_check_failed_title">API key check failed</string>
+    <string name="settings_ai_status_connected">Connected</string>
 
     <!-- Tags -->
     <string name="tag_settings_title">Tags</string>
@@ -114,6 +110,7 @@
     <string name="ai_chat_message">Message</string>
     <string name="ai_chat_you">You</string>
     <string name="ai_chat_assistant">AI</string>
+    <string name="chat_message_copied">Copied</string>
 
     <!-- Note format toolbar -->
     <string name="note_format_bold">Bold</string>
@@ -159,9 +156,22 @@
     <string name="error_load_ai_actions_failed">Failed to load AI actions</string>
     <string name="error_load_notes_failed">Failed to load notes</string>
     <string name="error_note_not_found">Note not found</string>
-    <string name="error_ai_invalid_api_key">Invalid API key. Check Settings</string>
-    <string name="error_ai_http_error">OpenAI error %1$d: %2$s</string>
-    <string name="error_ai_empty_response">Empty response from OpenAI</string>
-    <string name="error_ai_timeout">AI response timed out (%1$d s). Try again</string>
-    <string name="error_ai_request_failed">Failed to complete AI request</string>
+    <string name="error_ai_invalid_api_key">Invalid API key. Copy it from platform.openai.com without spaces or line breaks</string>
+    <string name="error_ai_http_error">OpenAI rejected the request (HTTP %1$s)</string>
+    <string name="error_ai_empty_response">OpenAI returned an empty response</string>
+    <string name="error_ai_timeout">OpenAI did not respond within %1$s s</string>
+    <string name="error_ai_request_failed">Could not reach OpenAI</string>
+    <string name="error_ai_request_failed_with_detail">%1$s</string>
+    <string name="error_ai_no_network">No internet connection</string>
+    <string name="error_ai_model_not_found">Model %1$s is unavailable. Choose another model below</string>
+    <string name="error_ai_rate_limit">OpenAI rate limit reached. Try again later</string>
+    <string name="error_ai_server_error">OpenAI server is temporarily unavailable</string>
+    <string name="error_ai_parse_error">OpenAI returned an invalid response</string>
+    <string name="error_ai_tls_error">Secure connection failed. Check internet, date, and time on your device</string>
+    <string name="error_ai_hint_certificate">The device does not trust the OpenAI certificate. Check date and time on your device</string>
+    <string name="error_ai_hint_ssl">Secure connection to OpenAI failed. Check date and time on your device</string>
+    <string name="error_ai_hint_dns">Could not find OpenAI server. Check internet connection</string>
+    <string name="error_ai_hint_timeout">OpenAI server did not respond in time</string>
+    <string name="error_ai_hint_connection">Connection to OpenAI was interrupted. Check internet</string>
+    <string name="error_ai_hint_technical">%1$s</string>
 </resources>

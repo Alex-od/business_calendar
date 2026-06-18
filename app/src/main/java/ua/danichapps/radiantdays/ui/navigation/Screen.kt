@@ -6,6 +6,8 @@ sealed class Screen(val route: String) {
 
     data object Settings : Screen("settings")
 
+    data object AiSettings : Screen("ai_settings")
+
     data object AiActions : Screen("ai_actions")
 
     data object TagSettings : Screen("tag_settings?returnAfterCreate={returnAfterCreate}") {
@@ -31,6 +33,4 @@ sealed class Screen(val route: String) {
         fun createRoute(tagGuid: String) = "tag_notes/$tagGuid"
         const val ARG_TAG_GUID = "tagGuid"
     }
-
-    data object AiChat : Screen("ai_chat")
 }
