@@ -22,6 +22,7 @@ data class CalendarEventDto(
     @SerialName("alarm_time_millis")           val alarmTimeMillis: Long? = null,
     @SerialName("is_completed")                val isCompleted: Boolean = false,
     @SerialName("tag_guids")                  val tagGuids: List<String> = emptyList(),
+    @SerialName("ai_chat_messages")           val aiChatMessagesJson: String = "[]",
     @SerialName("created_at_millis")          val createdAtMillis: Long = 0L,
     @SerialName("updated_at_millis")          val updatedAtMillis: Long = 0L,
 )

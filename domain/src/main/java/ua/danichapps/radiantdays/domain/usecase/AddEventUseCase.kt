@@ -8,7 +8,7 @@ import ua.danichapps.radiantdays.domain.repository.CalendarEventRepository
 class AddEventUseCase(private val repository: CalendarEventRepository) {
 
     suspend operator fun invoke(event: CalendarEvent): DomainResult<Long> {
-        if (event.title.isBlank() && event.description.isBlank()) {
+        if (event.title.isBlank() && event.description.isBlank() && event.aiChatMessages.isEmpty()) {
             return DomainResult.Error(
                 IllegalArgumentException("Title or note text must not be blank"),
                 MessageKey.EVENT_TEXT_BLANK,

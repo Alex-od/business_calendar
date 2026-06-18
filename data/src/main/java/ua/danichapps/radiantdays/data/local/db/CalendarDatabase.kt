@@ -13,7 +13,7 @@ import ua.danichapps.radiantdays.data.local.entity.TagEntity
 
 @Database(
     entities = [NoteEntity::class, TagEntity::class, NoteTagCrossRef::class, AiActionEntity::class],
-    version = 12,
+    version = 13,
     exportSchema = true,
 )
 abstract class CalendarDatabase : RoomDatabase() {

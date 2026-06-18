@@ -41,4 +41,7 @@ data class NoteEntity(
 
     @ColumnInfo(name = "updated_at_millis")
     val updatedAtMillis: Long = 0L,
+
+    @ColumnInfo(name = "ai_chat_messages", defaultValue = "[]")
+    val aiChatMessagesJson: String = "[]",
 )

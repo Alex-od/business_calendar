@@ -320,6 +320,16 @@ object CalendarDatabaseMigrations {
         }
     }
 
+    val MIGRATION_12_13 = object : Migration(12, 13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """
+                ALTER TABLE notes ADD COLUMN ai_chat_messages TEXT NOT NULL DEFAULT '[]'
+                """.trimIndent(),
+            )
+        }
+    }
+
     val ALL: Array<Migration> = arrayOf(
         MIGRATION_1_2,
         MIGRATION_2_3,
@@ -332,5 +342,6 @@ object CalendarDatabaseMigrations {
         MIGRATION_9_10,
         MIGRATION_10_11,
         MIGRATION_11_12,
+        MIGRATION_12_13,
     )
 }

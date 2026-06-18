@@ -6,6 +6,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -256,6 +257,28 @@ class CalendarDatabaseMigrationTest {
             assertEquals("Улучшить текст", cursor.getString(0))
             assertEquals(1, cursor.getInt(1))
             assertEquals(0, cursor.getInt(2))
+        }
+
+        db.close()
+    }
+
+    @Test
+    fun migrate12To13_addsAiChatMessagesColumn() {
+        helper.createDatabase(TEST_DB, 12).close()
+
+        val db = helper.runMigrationsAndValidate(
+            TEST_DB,
+            13,
+            true,
+            CalendarDatabaseMigrations.MIGRATION_12_13,
+        )
+
+        db.query(
+            """
+            SELECT ai_chat_messages FROM notes LIMIT 0
+            """.trimIndent(),
+        ).use { cursor ->
+            assertTrue(cursor.getColumnIndex("ai_chat_messages") >= 0)
         }
 
         db.close()

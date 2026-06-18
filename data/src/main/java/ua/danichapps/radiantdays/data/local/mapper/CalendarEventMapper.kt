@@ -22,6 +22,7 @@ fun NoteEntity.toDomain(tagGuids: Set<String> = emptySet()): CalendarEvent = Cal
     alarmTimeMillis = alarmTimeMillis,
     isCompleted = isCompleted,
     tagGuids = tagGuids,
+    aiChatMessages = aiChatMessagesJson.toAiChatMessages(),
     createdAtMillis = createdAtMillis,
     updatedAtMillis = updatedAtMillis,
 )
@@ -39,6 +40,7 @@ fun CalendarEvent.toEntity(): NoteEntity = NoteEntity(
     isCompleted = isCompleted,
     createdAtMillis = createdAtMillis,
     updatedAtMillis = updatedAtMillis,
+    aiChatMessagesJson = aiChatMessages.toJson(),
 )
 
 fun CalendarEventDto.toDomain(): CalendarEvent = CalendarEvent(
@@ -53,6 +55,7 @@ fun CalendarEventDto.toDomain(): CalendarEvent = CalendarEvent(
     alarmTimeMillis = alarmTimeMillis,
     isCompleted = isCompleted,
     tagGuids = tagGuids.toSet(),
+    aiChatMessages = aiChatMessagesJson.toAiChatMessages(),
     createdAtMillis = createdAtMillis,
     updatedAtMillis = updatedAtMillis,
 )
@@ -69,6 +72,7 @@ fun CalendarEvent.toDto(): CalendarEventDto = CalendarEventDto(
     alarmTimeMillis = alarmTimeMillis,
     isCompleted = isCompleted,
     tagGuids = tagGuids.toList(),
+    aiChatMessagesJson = aiChatMessages.toJson(),
     createdAtMillis = createdAtMillis,
     updatedAtMillis = updatedAtMillis,
 )

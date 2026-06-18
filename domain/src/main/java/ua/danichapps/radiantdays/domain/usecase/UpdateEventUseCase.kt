@@ -14,7 +14,7 @@ class UpdateEventUseCase(private val repository: CalendarEventRepository) {
                 MessageKey.EVENT_UNSAVED_UPDATE,
             )
         }
-        if (event.title.isBlank() && event.description.isBlank()) {
+        if (event.title.isBlank() && event.description.isBlank() && event.aiChatMessages.isEmpty()) {
             return DomainResult.Error(
                 IllegalArgumentException("Title or note text must not be blank"),
                 MessageKey.EVENT_TEXT_BLANK,

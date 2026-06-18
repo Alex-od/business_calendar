@@ -17,6 +17,7 @@ package ua.danichapps.radiantdays.domain.model
  * @property notificationMinutesBefore Minutes before [alarmTimeMillis] to trigger a reminder.
  *   Ignored when [alarmTimeMillis] is `null`. Effective fire time = alarmTimeMillis - this offset.
  * @property tagGuids     GUIDs of tags assigned to this note (may be empty).
+ * @property aiChatMessages Persisted AI chat history. Non-empty means the note opens in chat mode.
  * @property createdAtMillis Epoch ms when the note was first persisted.
  * @property updatedAtMillis Epoch ms when the note was last modified.
  */
@@ -32,6 +33,7 @@ data class CalendarEvent(
     val alarmTimeMillis: Long? = null,
     val isCompleted: Boolean = false,
     val tagGuids: Set<String> = emptySet(),
+    val aiChatMessages: List<AiChatMessage> = emptyList(),
     val createdAtMillis: Long = 0L,
     val updatedAtMillis: Long = 0L,
 )
