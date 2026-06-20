@@ -1,6 +1,8 @@
 package ua.danichapps.radiantdays.domain.usecase
 
 import ua.danichapps.radiantdays.domain.model.AiActionResult
+import ua.danichapps.radiantdays.domain.model.AiChatMessage
+import ua.danichapps.radiantdays.domain.model.AiChatRole
 import ua.danichapps.radiantdays.domain.model.AiNoteContext
 import ua.danichapps.radiantdays.domain.model.DomainResult
 import ua.danichapps.radiantdays.domain.model.MessageKey
@@ -12,7 +14,11 @@ class RunAiActionUseCase(
     private val repository: AiActionRepository,
     private val clientProvider: AiCompletionClientProvider,
 ) {
-    suspend operator fun invoke(actionGuid: String, context: AiNoteContext): DomainResult<AiActionResult> {
+    suspend operator fun invoke(
+        actionGuid: String,
+        context: AiNoteContext,
+        history: List<AiChatMessage> = emptyList(),
+    ): DomainResult<AiActionResult> {
         if (context.text.trim().isBlank()) {
             return DomainResult.Error(
                 IllegalArgumentException("Note text is required"),
@@ -25,9 +31,15 @@ class RunAiActionUseCase(
                 MessageKey.AI_ACTION_NOT_FOUND,
             )
         val resolvedPrompt = AiPromptTemplate.resolve(action.prompt, context)
-        return when (val result = clientProvider.getClient().complete(resolvedPrompt)) {
+        val userMessage = AiChatMessage(
+            role = AiChatRole.USER,
+            content = context.text,
+            apiContent = resolvedPrompt,
+            actionLabel = action.name,
+        )
+        return when (val result = clientProvider.getClient().completeConversation(history + userMessage)) {
             is DomainResult.Success -> DomainResult.Success(
-                AiActionResult(resolvedPrompt = resolvedPrompt, response = result.data),
+                AiActionResult(userMessage = userMessage, response = result.data),
             )
             is DomainResult.Error -> result
         }
