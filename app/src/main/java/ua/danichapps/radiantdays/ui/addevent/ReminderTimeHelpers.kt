@@ -2,8 +2,10 @@ package ua.danichapps.radiantdays.ui.addevent
 
 import java.util.Calendar
 
+/** Preset options for "minutes before" notification offset. */
 internal val REMINDER_OFFSET_MINUTES_OPTIONS = listOf(0, 5, 15, 30)
 
+/** Applies a new date while keeping the time from [originalMillis]. */
 internal fun mergeDateIntoMillis(dateMillis: Long, originalMillis: Long): Long {
     val dateCal = Calendar.getInstance().apply { timeInMillis = dateMillis }
     val originalCal = Calendar.getInstance().apply { timeInMillis = originalMillis }
@@ -14,6 +16,7 @@ internal fun mergeDateIntoMillis(dateMillis: Long, originalMillis: Long): Long {
     return dateCal.timeInMillis
 }
 
+/** Applies [hour] and [minute] while keeping the date from [originalMillis]. */
 internal fun mergeTimeIntoMillis(originalMillis: Long, hour: Int, minute: Int): Long =
     Calendar.getInstance().apply {
         timeInMillis = originalMillis

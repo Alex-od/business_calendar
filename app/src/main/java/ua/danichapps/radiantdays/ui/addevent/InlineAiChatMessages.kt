@@ -3,6 +3,7 @@ package ua.danichapps.radiantdays.ui.addevent
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -19,6 +20,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.dp
 import ua.danichapps.radiantdays.domain.model.AiChatMessage
 import ua.danichapps.radiantdays.domain.model.AiChatRole
@@ -29,17 +31,27 @@ private data class IndexedChatMessage(
     val message: AiChatMessage,
 )
 
+/** Action label of the first user message when it mirrors the note text. */
 private fun List<AiChatMessage>.hiddenFirstActionLabel(): String? =
     firstOrNull()
         ?.takeIf { it.role == AiChatRole.USER && it.actionLabel != null }
         ?.actionLabel
 
-private fun List<AiChatMessage>.visibleIndexedMessages(): List<IndexedChatMessage> =
+/** Messages to render, excluding the hidden first action prompt or note mirror. */
+private fun List<AiChatMessage>.visibleIndexedMessages(noteDescription: String): List<IndexedChatMessage> =
     mapIndexed { index, message -> IndexedChatMessage(index, message) }
         .filter { (index, message) ->
-            !(index == 0 && message.role == AiChatRole.USER && message.actionLabel != null)
+            !(index == 0 && message.role == AiChatRole.USER && message.shouldHideAsNoteMirror(noteDescription))
         }
 
+/** True when the first user message duplicates the note and should not appear in chat. */
+private fun AiChatMessage.shouldHideAsNoteMirror(noteDescription: String): Boolean {
+    if (actionLabel != null) return true
+    if (noteDescription.isBlank()) return false
+    return visibleContent(noteDescription).trim() == noteDescription.trim()
+}
+
+/** Scrollable list of AI chat bubbles with edit, copy, and delete. */
 @Composable
 fun InlineAiChatMessages(
     messages: List<AiChatMessage>,
@@ -56,7 +68,7 @@ fun InlineAiChatMessages(
     val listState = rememberLazyListState()
     val firstMessageResetKey = messages.firstOrNull()?.let { Triple(it.apiContent, it.actionLabel, it.role) }
     val hiddenActionLabel = remember(messages) { messages.hiddenFirstActionLabel() }
-    val visibleMessages = remember(messages) { messages.visibleIndexedMessages() }
+    val visibleMessages = remember(messages, noteDescription) { messages.visibleIndexedMessages(noteDescription) }
 
     LaunchedEffect(messages.isEmpty()) {
         if (messages.isEmpty()) {
@@ -70,22 +82,27 @@ fun InlineAiChatMessages(
         if (editingIndex == 0) editingIndex = -1
     }
 
-    LaunchedEffect(messages.size, loading, hiddenActionLabel) {
+    val inPreview = LocalInspectionMode.current
+
+    LaunchedEffect(messages.size, loading, hiddenActionLabel, listState.layoutInfo.totalItemsCount) {
+        if (inPreview) return@LaunchedEffect
         if (visibleMessages.isEmpty() && !loading) return@LaunchedEffect
         val labelOffset = if (hiddenActionLabel != null) 1 else 0
         val lastItemIndex = labelOffset + visibleMessages.lastIndex + if (loading) 1 else 0
+        if (listState.layoutInfo.totalItemsCount <= lastItemIndex) return@LaunchedEffect
         listState.animateScrollToItem(lastItemIndex)
     }
 
     if (messages.isEmpty() && !loading) return
 
+    /** Closes the context menu on the active message. */
     fun dismissMenu() {
         menuIndex = -1
     }
 
     LazyColumn(
         state = listState,
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
         contentPadding = PaddingValues(bottom = 4.dp),
     ) {
@@ -108,7 +125,7 @@ fun InlineAiChatMessages(
                 state = ChatMessageBubbleState(
                     message = item.message,
                     displayContent = displayContent,
-                    isFirstMessage = visibleIndex == 0,
+                    isFirstMessage = item.index == 0 && item.message.role == AiChatRole.USER,
                     isFirstMessageExpanded = firstMessageExpanded,
                     isEditing = editingIndex == item.index,
                     isMenuExpanded = menuIndex == item.index,
@@ -156,6 +173,7 @@ fun InlineAiChatMessages(
     }
 }
 
+/** Spinner row shown while waiting for an assistant reply. */
 @Composable
 private fun AiChatLoadingIndicator() {
     Row(

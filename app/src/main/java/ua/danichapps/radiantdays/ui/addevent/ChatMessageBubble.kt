@@ -43,6 +43,7 @@ import ua.danichapps.radiantdays.domain.model.AiChatRole
 
 private const val FIRST_MESSAGE_COLLAPSE_MAX_LINES = 4
 
+/** Returns true when chat text exceeds the collapsed first-message limit. */
 private fun isLongChatText(text: String): Boolean =
     text.lineSequence().count() > FIRST_MESSAGE_COLLAPSE_MAX_LINES || text.length > 200
 
@@ -68,6 +69,7 @@ internal data class ChatMessageBubbleCallbacks(
     val onDelete: () -> Unit,
 )
 
+/** Single chat bubble with inline edit, collapse, and context menu. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ChatMessageBubble(
@@ -100,8 +102,8 @@ internal fun ChatMessageBubble(
     val focusRequester = remember { FocusRequester() }
     var hadFocus by remember(isEditingMessage) { mutableStateOf(false) }
     val isLongText = isLongChatText(displayContent)
-    val showCollapsed = isFirstMessage && isLongText && !isFirstMessageExpanded && !isEditingMessage
-    val useFullWidth = isFirstMessage && (isFirstMessageExpanded || isEditingMessage)
+    val showCollapsed = isUser && isFirstMessage && isLongText && !isFirstMessageExpanded && !isEditingMessage
+    val useFullWidth = !isUser || (isFirstMessage && (isFirstMessageExpanded || isEditingMessage))
 
     LaunchedEffect(displayContent, isEditingMessage) {
         if (!isEditingMessage) draft = displayContent
@@ -142,7 +144,6 @@ internal fun ChatMessageBubble(
                     Modifier.combinedClickable(
                         enabled = !loading,
                         onClick = when {
-                            !canEdit && isFirstMessage && showCollapsed -> callbacks.onExpandOnly
                             canEdit && isFirstMessage -> callbacks.onExpandAndEdit
                             canEdit -> callbacks.onEnterEdit
                             else -> ({})
@@ -209,6 +210,7 @@ internal fun ChatMessageBubble(
     }
 }
 
+/** Read-only bubble text, optionally collapsed and selectable. */
 @Composable
 private fun ChatBubbleText(
     text: String,

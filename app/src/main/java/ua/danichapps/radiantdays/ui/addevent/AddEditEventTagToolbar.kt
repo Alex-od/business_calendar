@@ -29,14 +29,12 @@ import ua.danichapps.radiantdays.ui.common.ColoredTagChip
 import ua.danichapps.radiantdays.ui.common.TagChipSpacing
 import ua.danichapps.radiantdays.ui.common.TagOverflowRow
 
+/** Top bar with back button and tag quick-access chips. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun TagToolbar(
     uiState: AddEditEventUiState,
-    onBackClick: () -> Unit,
-    onTagToggle: (String) -> Unit,
-    onTagsExpandedToggle: () -> Unit,
-    onOpenTags: () -> Unit,
+    callbacks: AddEditEventScreenCallbacks,
 ) {
     Surface(
         color = TopAppBarDefaults.topAppBarColors().containerColor,
@@ -49,7 +47,7 @@ internal fun TagToolbar(
                 .padding(vertical = TagChipSpacing.ToolbarVerticalPadding),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onBackClick) {
+            IconButton(onClick = callbacks.onBackClick) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.action_back))
             }
             TagQuickAccessSection(
@@ -57,14 +55,15 @@ internal fun TagToolbar(
                 tags = uiState.tags,
                 selectedTagGuids = uiState.selectedTagGuids,
                 tagsExpanded = uiState.tagsExpanded,
-                onTagToggle = onTagToggle,
-                onTagsExpandedToggle = onTagsExpandedToggle,
-                onOpenTags = onOpenTags,
+                onTagToggle = callbacks.onTagToggle,
+                onTagsExpandedToggle = callbacks.onTagsExpandedToggle,
+                onOpenTags = callbacks.onOpenTags,
             )
         }
     }
 }
 
+/** Selected tags row plus expandable list of remaining tags. */
 @Composable
 private fun TagQuickAccessSection(
     tags: List<Tag>,

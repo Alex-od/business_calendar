@@ -28,6 +28,7 @@ import ua.danichapps.radiantdays.ui.common.NoteDisplayStyles
 import java.text.SimpleDateFormat
 import java.util.Calendar
 
+/** Note editor inside the alarm drawer; hosts date/time pickers for the alarm. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun EventForm(

@@ -51,6 +51,7 @@ class AddEditEventAiChatInputUiTest {
     fun aiChatInput_isDisplayed_whenShowAiChatTrue() {
         setProductionLikeLayout(showAiChat = true)
         composeRule.onNodeWithTag(AiChatInputTestTags.BAR).assertIsDisplayed()
+        composeRule.onNodeWithTag(AiChatInputTestTags.ACTIONS).assertIsDisplayed()
         composeRule.onNodeWithTag(AiChatInputTestTags.FIELD).assertIsDisplayed()
     }
 
@@ -195,6 +196,7 @@ private fun ProductionLikeAiChatScaffold(
                 InlineAiChatInput(
                     loading = false,
                     onSend = {},
+                    onAiActionsClick = {},
                     modifier = inputModifier,
                 )
             }

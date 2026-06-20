@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -28,10 +29,12 @@ import androidx.compose.ui.unit.dp
 import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.ui.theme.RadiantDaysTheme
 
+/** Text field, AI actions button, and send button for continuing the AI chat. */
 @Composable
 fun InlineAiChatInput(
     loading: Boolean,
     onSend: (String) -> Unit,
+    onAiActionsClick: () -> Unit,
     onFocusChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -49,6 +52,12 @@ fun InlineAiChatInput(
                 .padding(horizontal = 5.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            IconButton(
+                onClick = onAiActionsClick,
+                modifier = Modifier.testTag(AiChatInputTestTags.ACTIONS),
+            ) {
+                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.event_ai_actions))
+            }
             OutlinedTextField(
                 value = inputText,
                 onValueChange = { inputText = it },
@@ -78,9 +87,11 @@ fun InlineAiChatInput(
 
 object AiChatInputTestTags {
     const val BAR = "ai_chat_input_bar"
+    const val ACTIONS = "ai_chat_input_actions"
     const val FIELD = "ai_chat_input_field"
 }
 
+/** Preview: idle chat input. */
 @Preview(showBackground = true, name = "Idle")
 @Composable
 private fun InlineAiChatInputPreview() {
@@ -88,10 +99,12 @@ private fun InlineAiChatInputPreview() {
         InlineAiChatInput(
             loading = false,
             onSend = {},
+            onAiActionsClick = {},
         )
     }
 }
 
+/** Preview: chat input while a message is sending. */
 @Preview(showBackground = true, name = "Loading")
 @Composable
 private fun InlineAiChatInputLoadingPreview() {
@@ -99,6 +112,7 @@ private fun InlineAiChatInputLoadingPreview() {
         InlineAiChatInput(
             loading = true,
             onSend = {},
+            onAiActionsClick = {},
         )
     }
 }

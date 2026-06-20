@@ -42,6 +42,7 @@ import ua.danichapps.radiantdays.R
 
 private val AlarmDrawerWidth = 280.dp
 
+/** Right-side drawer for alarm settings and note editor toggles. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlarmReminderDrawer(
@@ -105,6 +106,7 @@ fun AlarmReminderDrawer(
     }
 }
 
+/** Drawer content: alarm controls and note editor visibility switches. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AlarmSidePanel(
@@ -185,6 +187,7 @@ private fun AlarmSidePanel(
     }
 }
 
+/** Label + switch row for a note editor preference. */
 @Composable
 private fun NoteEditorToggleItem(
     label: String,
@@ -202,6 +205,7 @@ private fun NoteEditorToggleItem(
     )
 }
 
+/** Read-only dropdown for choosing reminder offset minutes. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun AlarmDropdownField(

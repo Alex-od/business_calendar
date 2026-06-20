@@ -76,6 +76,7 @@ class AddEditEventViewModel(
         observeVisibleAiActions()
     }
 
+    /** Reloads format toolbar and AI chat visibility from preferences. */
     fun refreshNoteEditorPreferences() {
         _uiState.update {
             it.copy(
@@ -85,30 +86,41 @@ class AddEditEventViewModel(
         }
     }
 
+    /** Shows or hides the note format toolbar and persists the choice. */
     fun onShowFormatToolbarChange(visible: Boolean) {
         noteEditorPreferencesStore.setFormatToolbarVisible(visible)
         _uiState.update { it.copy(showFormatToolbar = visible) }
     }
 
+    /** Shows or hides the inline AI chat panel and persists the choice. */
     fun onShowAiChatChange(visible: Boolean) {
         noteEditorPreferencesStore.setAiChatVisible(visible)
         _uiState.update { it.copy(showAiChat = visible) }
     }
 
+    /** Updates whether an AI API key is configured. */
     fun refreshAiKeyStatus() {
         _uiState.update { it.copy(isAiKeySaved = apiKeyStore.hasKey()) }
     }
 
+    /** Opens the AI actions sheet when key and description are present. */
     fun onAiButtonClick() {
         if (!_uiState.value.isAiKeySaved) return
         if (_uiState.value.description.isBlank()) return
         _uiState.update { it.copy(aiSheetVisible = true) }
     }
 
+    /** Opens the AI actions sheet from the chat input bar. */
+    fun openAiActionsSheet() {
+        _uiState.update { it.copy(aiSheetVisible = true) }
+    }
+
+    /** Closes the AI actions bottom sheet. */
     fun onAiSheetDismiss() {
         _uiState.update { it.copy(aiSheetVisible = false) }
     }
 
+    /** Runs the selected AI action and appends user/assistant messages. */
     fun onAiActionSelected(actionGuid: String) {
         val state = _uiState.value
         val history = state.aiChatMessages
@@ -143,6 +155,7 @@ class AddEditEventViewModel(
         }
     }
 
+    /** Edits a chat message; syncs the first user message back to the note. */
     fun onAiChatMessageEdit(index: Int, content: String) {
         val messages = _uiState.value.aiChatMessages
         if (index !in messages.indices) return
@@ -165,6 +178,7 @@ class AddEditEventViewModel(
         scheduleAutoSave()
     }
 
+    /** Removes a chat message and its paired action prompt when applicable. */
     fun onAiChatMessageDelete(index: Int) {
         if (_uiState.value.aiChatLoading) return
         val messages = _uiState.value.aiChatMessages
@@ -186,6 +200,7 @@ class AddEditEventViewModel(
         scheduleAutoSave()
     }
 
+    /** Sends a free-form follow-up message in the AI chat. */
     fun onAiChatSend(message: String) {
         val trimmed = message.trim()
         if (trimmed.isBlank() || _uiState.value.aiChatLoading) return
@@ -223,6 +238,7 @@ class AddEditEventViewModel(
         }
     }
 
+    /** Loads an existing event by id into uiState. */
     fun loadEvent(id: Long) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
@@ -256,6 +272,7 @@ class AddEditEventViewModel(
         }
     }
 
+    /** Sets start time to 09:00 on the given day for a new event. */
     fun setInitialDay(dayMillis: Long) {
         clearDescriptionUndo()
         val startAt9 = Calendar.getInstance().apply {
@@ -268,11 +285,13 @@ class AddEditEventViewModel(
         _uiState.update { it.copy(startTimeMillis = startAt9) }
     }
 
+    /** Updates the event title and clears validation error. */
     fun onTitleChange(value: String) {
         _uiState.update { it.copy(title = value, titleError = null) }
         scheduleAutoSave()
     }
 
+    /** Updates description with grouped undo support for typing bursts. */
     fun onDescriptionChange(value: String) {
         if (isUndoingDescription) {
             setDescription(value)
@@ -289,10 +308,12 @@ class AddEditEventViewModel(
         scheduleUndoGroupCommit()
     }
 
+    /** Applies voice input as a single undoable description change. */
     fun onDescriptionChangeFromVoice(value: String) {
         applyDiscreteDescriptionChange(value)
     }
 
+    /** Reverts description to the previous undo snapshot or in-progress group. */
     fun onDescriptionUndo() {
         descriptionUndoGroupJob?.cancel()
         descriptionUndoGroupJob = null
@@ -317,11 +338,13 @@ class AddEditEventViewModel(
         isUndoingDescription = false
     }
 
+    /** Writes description to uiState and schedules auto-save. */
     private fun setDescription(value: String) {
         _uiState.update { it.copy(description = value, descriptionError = null) }
         scheduleAutoSave()
     }
 
+    /** Replaces description atomically with a new undo snapshot. */
     private fun applyDiscreteDescriptionChange(value: String) {
         if (value == _uiState.value.description) return
         flushUndoGroup()
@@ -330,6 +353,7 @@ class AddEditEventViewModel(
         setDescription(value)
     }
 
+    /** Commits the current typing group to the undo stack after a pause. */
     private fun scheduleUndoGroupCommit() {
         descriptionUndoGroupJob?.cancel()
         descriptionUndoGroupJob = viewModelScope.launch {
@@ -342,6 +366,7 @@ class AddEditEventViewModel(
         }
     }
 
+    /** Adds a description snapshot to the bounded undo stack. */
     private fun pushUndoSnapshot(text: String) {
         if (descriptionUndoStack.lastOrNull() == text) return
         if (descriptionUndoStack.size >= DESCRIPTION_UNDO_LIMIT) {
@@ -351,6 +376,7 @@ class AddEditEventViewModel(
         updateCanUndoDescription()
     }
 
+    /** Commits any pending typing group before a discrete change or undo. */
     private fun flushUndoGroup() {
         descriptionUndoGroupJob?.cancel()
         descriptionUndoGroupJob = null
@@ -362,6 +388,7 @@ class AddEditEventViewModel(
         }
     }
 
+    /** Resets undo state when loading or resetting the note. */
     private fun clearDescriptionUndo() {
         descriptionUndoGroupJob?.cancel()
         descriptionUndoGroupJob = null
@@ -370,6 +397,7 @@ class AddEditEventViewModel(
         updateCanUndoDescription()
     }
 
+    /** Updates [AddEditEventUiState.canUndoDescription] from stack and group state. */
     private fun updateCanUndoDescription() {
         val canUndo = descriptionUndoStack.isNotEmpty() || descriptionUndoGroupBase != null
         if (_uiState.value.canUndoDescription != canUndo) {
@@ -377,11 +405,13 @@ class AddEditEventViewModel(
         }
     }
 
+    /** Updates event start time. */
     fun onStartTimeChange(millis: Long) {
         _uiState.update { it.copy(startTimeMillis = millis) }
         scheduleAutoSave()
     }
 
+    /** Sets default alarm one hour ahead if none exists. */
     fun onAddAlarmClick() {
         _uiState.update { state ->
             if (state.alarmTimeMillis != null) return@update state
@@ -390,26 +420,31 @@ class AddEditEventViewModel(
         scheduleAutoSave()
     }
 
+    /** Clears the alarm for this event. */
     fun onRemoveAlarmClick() {
         _uiState.update { it.copy(alarmTimeMillis = null) }
         scheduleAutoSave()
     }
 
+    /** Updates alarm date/time. */
     fun onAlarmTimeChange(millis: Long) {
         _uiState.update { it.copy(alarmTimeMillis = millis) }
         scheduleAutoSave()
     }
 
+    /** Toggles event completed flag. */
     fun onIsCompletedChange(value: Boolean) {
         _uiState.update { it.copy(isCompleted = value) }
         scheduleAutoSave()
     }
 
+    /** Sets how many minutes before the alarm to notify. */
     fun onNotificationMinutesChange(min: Int) {
         _uiState.update { it.copy(notificationMinutesBefore = min) }
         scheduleAutoSave()
     }
 
+    /** Adds or removes a tag from the selected set. */
     fun onTagToggle(tagGuid: String) {
         _uiState.update { state ->
             val next = if (tagGuid in state.selectedTagGuids) {
@@ -422,6 +457,7 @@ class AddEditEventViewModel(
         scheduleAutoSave()
     }
 
+    /** Selects a tag created in settings and returns to this screen. */
     fun onTagAddedFromSettings(tagGuid: String) {
         _uiState.update { state ->
             state.copy(selectedTagGuids = state.selectedTagGuids + tagGuid)
@@ -429,8 +465,10 @@ class AddEditEventViewModel(
         scheduleAutoSave()
     }
 
+    /** Expands or collapses the unselected tags row. */
     fun onTagsExpandedToggle() = _uiState.update { it.copy(tagsExpanded = !it.tagsExpanded) }
 
+    /** Flushes pending save and navigates back. */
     fun onBackClick() {
         autoSaveJob?.cancel()
         viewModelScope.launch {
@@ -439,6 +477,7 @@ class AddEditEventViewModel(
         }
     }
 
+    /** Debounces persist after field changes. */
     private fun scheduleAutoSave() {
         autoSaveJob?.cancel()
         autoSaveJob = viewModelScope.launch {
@@ -447,6 +486,7 @@ class AddEditEventViewModel(
         }
     }
 
+    /** Creates or updates the event, then refreshes alarm and widget. */
     private suspend fun performSave(state: AddEditEventUiState) {
         if (state.title.isBlank() && state.description.isBlank() && state.aiChatMessages.isEmpty()) return
         val event = buildEvent(state)
@@ -493,6 +533,7 @@ class AddEditEventViewModel(
         }
     }
 
+    /** Maps uiState to a [CalendarEvent] for persistence. */
     private fun buildEvent(state: AddEditEventUiState) = CalendarEvent(
         id = state.editingEventId ?: 0L,
         title = state.title.trim(),
@@ -507,6 +548,7 @@ class AddEditEventViewModel(
         aiChatMessages = state.aiChatMessages,
     )
 
+    /** Subscribes to tag list and prunes stale selected guids. */
     private fun observeTags() {
         viewModelScope.launch {
             getTagsUseCase()
@@ -528,6 +570,7 @@ class AddEditEventViewModel(
         }
     }
 
+    /** Subscribes to visible AI actions for the bottom sheet. */
     private fun observeVisibleAiActions() {
         viewModelScope.launch {
             getVisibleAiActionsUseCase()

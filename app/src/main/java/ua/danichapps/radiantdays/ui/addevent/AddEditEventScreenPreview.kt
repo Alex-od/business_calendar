@@ -14,6 +14,7 @@ import ua.danichapps.radiantdays.domain.model.Tag
 import ua.danichapps.radiantdays.locale.AppLocaleStore
 import ua.danichapps.radiantdays.ui.theme.RadiantDaysTheme
 
+/** Preview: add-event screen with tags and description. */
 @Preview(showBackground = true, name = "Add event", device = Devices.PIXEL_6)
 @Composable
 private fun AddEditEventScreenPreview() {
@@ -38,13 +39,12 @@ private fun AddEditEventScreenPreview() {
                 ),
                 callbacks = AddEditEventScreenCallbacks(),
                 snackbarHostState = remember { SnackbarHostState() },
-                onOpenTags = {},
-                onOpenAiActions = {},
             )
         }
     }
 }
 
+/** Preview: add-event screen in loading state. */
 @Preview(showBackground = true, name = "Loading", device = Devices.PIXEL_6)
 @Composable
 private fun AddEditEventScreenLoadingPreview() {
@@ -62,8 +62,6 @@ private fun AddEditEventScreenLoadingPreview() {
                 uiState = AddEditEventUiState(isLoading = true),
                 callbacks = AddEditEventScreenCallbacks(),
                 snackbarHostState = remember { SnackbarHostState() },
-                onOpenTags = {},
-                onOpenAiActions = {},
             )
         }
     }

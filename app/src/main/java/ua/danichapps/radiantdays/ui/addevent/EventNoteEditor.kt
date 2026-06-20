@@ -1,9 +1,12 @@
 package ua.danichapps.radiantdays.ui.addevent
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
@@ -25,6 +28,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
@@ -53,10 +57,16 @@ internal class EventNoteEditorState(
     private val setBoldTyping: (Boolean) -> Unit,
     private val setIsDescriptionFocused: (Boolean) -> Unit,
 ) {
+    /** Updates the rich-text field value. */
     fun updateDescriptionValue(value: TextFieldValue) = setDescriptionValue(value)
+
+    /** Toggles bold typing mode for new characters. */
     fun updateBoldTyping(value: Boolean) = setBoldTyping(value)
+
+    /** Tracks whether the description field has focus. */
     fun onFocusChange(focused: Boolean) = setIsDescriptionFocused(focused)
 
+    /** Applies span preservation and optional bold typing on edit. */
     fun onValueChange(newValue: TextFieldValue) {
         val preserved = preserveSpansOnEdit(descriptionValue, newValue)
         val processed = if (boldTyping) {
@@ -68,6 +78,7 @@ internal class EventNoteEditorState(
     }
 }
 
+/** Creates and remembers note editor state synced with ViewModel description. */
 @Composable
 internal fun rememberEventNoteEditorState(
     description: String,
@@ -154,6 +165,7 @@ internal fun rememberEventNoteEditorState(
     )
 }
 
+/** Rich note field with toolbar, voice input, AI button, and optional chat list. */
 @Composable
 internal fun EventNoteEditor(
     state: EventNoteEditorState,
@@ -166,6 +178,9 @@ internal fun EventNoteEditor(
     val showFormatToolbar = uiState.showFormatToolbar
     val hasAiChatContent = uiState.aiChatMessages.isNotEmpty() || uiState.aiChatLoading
     val isAiChatMessagesVisible = uiState.showAiChat && hasAiChatContent
+    val noteMaxHeightWhenChatVisible = with(LocalDensity.current) {
+        (bodyTextStyle.lineHeight.toPx() * 3).toDp()
+    }
 
     Column(modifier = modifier) {
         Row(
@@ -208,33 +223,51 @@ internal fun EventNoteEditor(
                 .weight(1f)
                 .fillMaxWidth(),
         ) {
-            RichNoteTextField(
-                value = state.descriptionValue,
-                onFocusChange = state::onFocusChange,
-                onValueChange = state::onValueChange,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(
-                        weight = 1f,
-                        fill = !isAiChatMessagesVisible,
-                    ),
-                textStyle = bodyTextStyle,
-                minLines = 1,
-            )
+            if (isAiChatMessagesVisible) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(noteMaxHeightWhenChatVisible),
+                ) {
+                    RichNoteTextField(
+                        value = state.descriptionValue,
+                        onFocusChange = state::onFocusChange,
+                        onValueChange = state::onValueChange,
+                        modifier = Modifier.fillMaxSize(),
+                        textStyle = bodyTextStyle,
+                        minLines = 1,
+                    )
+                }
+            } else {
+                RichNoteTextField(
+                    value = state.descriptionValue,
+                    onFocusChange = state::onFocusChange,
+                    onValueChange = state::onValueChange,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    textStyle = bodyTextStyle,
+                    minLines = 1,
+                )
+            }
 
             if (isAiChatMessagesVisible) {
                 HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
-                InlineAiChatMessages(
-                    messages = uiState.aiChatMessages,
-                    noteDescription = uiState.description,
-                    loading = uiState.aiChatLoading,
-                    onMessageEdit = callbacks.onAiChatMessageEdit,
-                    onMessageDelete = callbacks.onAiChatMessageDelete,
-                    onMessageCopied = callbacks.onAiChatMessageCopied,
+                Box(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxWidth(),
-                )
+                ) {
+                    InlineAiChatMessages(
+                        messages = uiState.aiChatMessages,
+                        noteDescription = uiState.description,
+                        loading = uiState.aiChatLoading,
+                        onMessageEdit = callbacks.onAiChatMessageEdit,
+                        onMessageDelete = callbacks.onAiChatMessageDelete,
+                        onMessageCopied = callbacks.onAiChatMessageCopied,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                }
             }
 
             if (uiState.descriptionError != null) {

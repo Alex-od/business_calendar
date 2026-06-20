@@ -6,16 +6,20 @@ class NoteEditorPreferencesStore(context: Context) {
 
     private val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+    /** Whether the format toolbar is shown in the note editor. */
     fun isFormatToolbarVisible(): Boolean =
         prefs.getBoolean(KEY_SHOW_FORMAT_TOOLBAR, DEFAULT_SHOW_FORMAT_TOOLBAR)
 
+    /** Whether the inline AI chat panel is shown. */
     fun isAiChatVisible(): Boolean =
         prefs.getBoolean(KEY_SHOW_AI_CHAT, DEFAULT_SHOW_AI_CHAT)
 
+    /** Persists format toolbar visibility. */
     fun setFormatToolbarVisible(visible: Boolean) {
         prefs.edit().putBoolean(KEY_SHOW_FORMAT_TOOLBAR, visible).apply()
     }
 
+    /** Persists AI chat panel visibility. */
     fun setAiChatVisible(visible: Boolean) {
         prefs.edit().putBoolean(KEY_SHOW_AI_CHAT, visible).apply()
     }
