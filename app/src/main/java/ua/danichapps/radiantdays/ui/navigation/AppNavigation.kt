@@ -12,7 +12,6 @@ import ua.danichapps.radiantdays.ui.addevent.AddEditEventScreen
 import ua.danichapps.radiantdays.ui.calendar.CalendarScreen
 import ua.danichapps.radiantdays.ui.aiactions.AiActionsScreen
 import ua.danichapps.radiantdays.ui.settings.AiSettingsScreen
-import ua.danichapps.radiantdays.ui.settings.SettingsScreen
 import ua.danichapps.radiantdays.ui.tags.TagSettingsScreen
 import ua.danichapps.radiantdays.ui.tagnotes.TagNotesScreen
 
@@ -44,15 +43,6 @@ fun AppNavigation(
                 onEditEvent = { eventId ->
                     navController.navigate(Screen.EditEvent.createRoute(eventId))
                 },
-                onOpenSettings = {
-                    navController.navigate(Screen.Settings.route)
-                },
-            )
-        }
-
-        composable(Screen.Settings.route) {
-            SettingsScreen(
-                onNavigateBack = { navController.popBackStack() },
                 onOpenAiSettings = { navController.navigate(Screen.AiSettings.route) },
                 onOpenTags = { navController.navigate(Screen.TagSettings.createRoute()) },
             )

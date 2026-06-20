@@ -4,8 +4,6 @@ sealed class Screen(val route: String) {
 
     data object Calendar : Screen("calendar")
 
-    data object Settings : Screen("settings")
-
     data object AiSettings : Screen("ai_settings")
 
     data object AiActions : Screen("ai_actions")

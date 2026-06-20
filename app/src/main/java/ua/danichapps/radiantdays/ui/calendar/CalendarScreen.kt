@@ -39,7 +39,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -70,6 +69,7 @@ import ua.danichapps.radiantdays.calendar.buildMonthDays
 import ua.danichapps.radiantdays.calendar.sameDay
 import ua.danichapps.radiantdays.domain.model.CalendarEvent
 import ua.danichapps.radiantdays.domain.model.displayHeadline
+import ua.danichapps.radiantdays.ui.settings.SettingsDrawer
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -89,7 +89,8 @@ import java.util.Locale
 fun CalendarScreen(
     onAddEvent: (Long) -> Unit,
     onEditEvent: (Long) -> Unit,
-    onOpenSettings: () -> Unit,
+    onOpenAiSettings: () -> Unit,
+    onOpenTags: () -> Unit,
     viewModel: CalendarViewModel = koinViewModel(),
 ) {
     // FIX #3: collectAsStateWithLifecycle stops collection when the screen is not visible
@@ -108,85 +109,72 @@ fun CalendarScreen(
         }
     }
 
-    Scaffold(
-        topBar = {
-            CalendarTopBar(onOpenSettings = onOpenSettings)
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { onAddEvent(uiState.selectedDayMillis) }) {
-                Icon(Icons.Default.Add, contentDescription = stringResource(R.string.calendar_add_event))
-            }
-        },
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
+    SettingsDrawer(
+        onOpenAiSettings = onOpenAiSettings,
+        onOpenTags = onOpenTags,
+    ) { openSettingsDrawer ->
+        Scaffold(
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            floatingActionButton = {
+                FloatingActionButton(onClick = { onAddEvent(uiState.selectedDayMillis) }) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.calendar_add_event))
+                }
+            },
+        ) { padding ->
             Column(
-                modifier = Modifier.swipeMonths(
-                    onPreviousMonth = viewModel::navigateToPreviousMonth,
-                    onNextMonth     = viewModel::navigateToNextMonth,
-                ),
-            ) {
-                MonthHeader(
-                    currentMonthMillis = uiState.currentMonthMillis,
-                    locale = locale,
-                    onPrevious         = viewModel::navigateToPreviousMonth,
-                    onNext             = viewModel::navigateToNextMonth,
-                )
-                WeekDayHeaders(locale = locale)
-                MonthGrid(
-                    currentMonthMillis = uiState.currentMonthMillis,
-                    selectedDayMillis  = uiState.selectedDayMillis,
-                    eventsForMonth     = uiState.eventsForMonth,
-                    onDaySelected      = viewModel::selectDay,
-                )
-            }
-            Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .weight(1f),
+                    .fillMaxSize()
+                    .padding(padding),
             ) {
-                if (uiState.isLoading) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator()
-                    }
-                } else {
-                    EventListForDay(
-                        events        = uiState.eventsForDay,
-                        locale        = locale,
-                        onEditEvent   = onEditEvent,
-                        onDeleteEvent = viewModel::deleteEvent,
+                Column(
+                    modifier = Modifier.swipeMonths(
+                        onPreviousMonth = viewModel::navigateToPreviousMonth,
+                        onNextMonth     = viewModel::navigateToNextMonth,
+                    ),
+                ) {
+                    MonthHeader(
+                        currentMonthMillis = uiState.currentMonthMillis,
+                        locale = locale,
+                        onOpenSettings = openSettingsDrawer,
+                        onPrevious         = viewModel::navigateToPreviousMonth,
+                        onNext             = viewModel::navigateToNextMonth,
                     )
+                    WeekDayHeaders(locale = locale)
+                    MonthGrid(
+                        currentMonthMillis = uiState.currentMonthMillis,
+                        selectedDayMillis  = uiState.selectedDayMillis,
+                        eventsForMonth     = uiState.eventsForMonth,
+                        onDaySelected      = viewModel::selectDay,
+                    )
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                ) {
+                    if (uiState.isLoading) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator()
+                        }
+                    } else {
+                        EventListForDay(
+                            events        = uiState.eventsForDay,
+                            locale        = locale,
+                            onEditEvent   = onEditEvent,
+                            onDeleteEvent = viewModel::deleteEvent,
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-// Sub-composables
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun CalendarTopBar(
-    onOpenSettings: () -> Unit,
-) {
-    TopAppBar(
-        title = {},
-        actions = {
-            IconButton(onClick = onOpenSettings) {
-                Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.calendar_settings))
-            }
-        },
-    )
-}
-
 @Composable
 private fun MonthHeader(
     currentMonthMillis: Long,
     locale: Locale,
+    onOpenSettings: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
 ) {
@@ -196,12 +184,20 @@ private fun MonthHeader(
     Row(
         modifier              = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
         verticalAlignment     = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
+        IconButton(onClick = onOpenSettings) {
+            Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.calendar_settings))
+        }
         IconButton(onClick = onPrevious) {
             Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.calendar_previous_month))
         }
-        Text(text = monthLabel, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+        Text(
+            text = monthLabel,
+            modifier = Modifier.weight(1f),
+            textAlign = TextAlign.Center,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+        )
         IconButton(onClick = onNext) {
             Icon(Icons.Default.ChevronRight, contentDescription = stringResource(R.string.calendar_next_month))
         }
