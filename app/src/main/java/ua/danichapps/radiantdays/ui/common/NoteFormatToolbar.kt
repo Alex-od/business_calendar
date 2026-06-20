@@ -2,8 +2,6 @@ package ua.danichapps.radiantdays.ui.common
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FormatBold
 import androidx.compose.material.icons.filled.FormatListBulleted
@@ -45,9 +43,7 @@ fun NoteFormatToolbar(
     }
 
     Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(bottom = 4.dp),
+        modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {

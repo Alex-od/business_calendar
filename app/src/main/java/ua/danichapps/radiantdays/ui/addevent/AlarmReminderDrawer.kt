@@ -15,10 +15,12 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ListItem
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDrawerState
@@ -52,6 +54,10 @@ fun AlarmReminderDrawer(
     onDateClick: () -> Unit,
     onTimeClick: () -> Unit,
     onNotificationMinutesChange: (Int) -> Unit,
+    showFormatToolbar: Boolean,
+    showAiChat: Boolean,
+    onShowFormatToolbarChange: (Boolean) -> Unit,
+    onShowAiChatChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
@@ -82,6 +88,10 @@ fun AlarmReminderDrawer(
                             onDateClick = onDateClick,
                             onTimeClick = onTimeClick,
                             onNotificationMinutesChange = onNotificationMinutesChange,
+                            showFormatToolbar = showFormatToolbar,
+                            showAiChat = showAiChat,
+                            onShowFormatToolbarChange = onShowFormatToolbarChange,
+                            onShowAiChatChange = onShowAiChatChange,
                             modifier = Modifier.fillMaxHeight(),
                         )
                     }
@@ -107,6 +117,10 @@ private fun AlarmSidePanel(
     onDateClick: () -> Unit,
     onTimeClick: () -> Unit,
     onNotificationMinutesChange: (Int) -> Unit,
+    showFormatToolbar: Boolean,
+    showAiChat: Boolean,
+    onShowFormatToolbarChange: (Boolean) -> Unit,
+    onShowAiChatChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -115,11 +129,6 @@ private fun AlarmSidePanel(
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Text(
-            text = stringResource(R.string.event_reminder),
-            style = MaterialTheme.typography.titleSmall,
-        )
-
         if (alarmTimeMillis == null) {
             TextButton(onClick = onAddAlarm) {
                 Text(stringResource(R.string.event_add_alarm))
@@ -160,7 +169,37 @@ private fun AlarmSidePanel(
                 Text(stringResource(R.string.event_remove_alarm))
             }
         }
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+        NoteEditorToggleItem(
+            label = stringResource(R.string.note_editor_show_format_toolbar),
+            checked = showFormatToolbar,
+            onCheckedChange = onShowFormatToolbarChange,
+        )
+        NoteEditorToggleItem(
+            label = stringResource(R.string.note_editor_show_ai_chat),
+            checked = showAiChat,
+            onCheckedChange = onShowAiChatChange,
+        )
     }
+}
+
+@Composable
+private fun NoteEditorToggleItem(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    ListItem(
+        headlineContent = { Text(label) },
+        trailingContent = {
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange,
+            )
+        },
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

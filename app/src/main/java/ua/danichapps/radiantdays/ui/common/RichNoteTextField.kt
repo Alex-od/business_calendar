@@ -1,6 +1,8 @@
 package ua.danichapps.radiantdays.ui.common
 
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusChanged
@@ -16,11 +18,14 @@ fun RichNoteTextField(
     modifier: Modifier = Modifier,
     minLines: Int = 1,
 ) {
+    val scrollState = rememberScrollState()
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
         textStyle = textStyle,
-        modifier = modifier.onFocusChanged { state -> onFocusChange(state.isFocused) },
+        modifier = modifier
+            .verticalScroll(scrollState)
+            .onFocusChanged { state -> onFocusChange(state.isFocused) },
         minLines = minLines,
     )
 }

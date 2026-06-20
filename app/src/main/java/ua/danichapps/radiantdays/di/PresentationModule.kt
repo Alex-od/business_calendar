@@ -17,6 +17,7 @@ import ua.danichapps.radiantdays.notification.EventNotificationManager
 import ua.danichapps.radiantdays.sync.DeviceIdProvider
 import ua.danichapps.radiantdays.sync.WebSocketBridgeClient
 import ua.danichapps.radiantdays.ui.addevent.AddEditEventViewModel
+import ua.danichapps.radiantdays.ui.addevent.NoteEditorPreferencesStore
 import ua.danichapps.radiantdays.ui.aiactions.AiActionsViewModel
 import ua.danichapps.radiantdays.ui.calendar.CalendarViewModel
 import ua.danichapps.radiantdays.ui.settings.AiSettingsViewModel
@@ -52,6 +53,7 @@ val presentationModule = module {
             errorStrings = get(),
             localeStore = get(),
             apiKeyStore = get(),
+            noteEditorPreferencesStore = get(),
         )
     }
 
@@ -111,6 +113,7 @@ val presentationModule = module {
     single { createAiOkHttpClient() }
     single { AiApiKeyStore(get()) }
     single { AppLocaleStore(get()) }
+    single { NoteEditorPreferencesStore(get()) }
     single { AppLocaleManager() }
     single { DomainErrorStrings(get()) }
     single { AppStrings(get()) }

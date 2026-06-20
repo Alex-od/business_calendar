@@ -69,8 +69,6 @@
     <string name="event_voice_unavailable">Голосовий ввід недоступний на цьому пристрої</string>
     <string name="event_voice_input">Голосовий ввід</string>
     <string name="event_voice_prompt">Говоріть…</string>
-    <string name="event_ai_result_title">Результат AI</string>
-    <string name="event_continue_chat">Продовжити чат</string>
     <string name="event_reminder">Нагадування</string>
     <string name="event_reminder_push">Push: %1$s %2$s</string>
     <string name="event_minutes_before">За скільки хвилин до нагадування</string>
@@ -101,8 +99,7 @@
     <string name="ai_action_prompt_required_local">Введіть інструкцію для AI</string>
 
     <!-- AI chat -->
-    <string name="ai_chat_title">AI-чат</string>
-    <string name="ai_chat_message">Повідомлення</string>
+    <string name="ai_chat_message">Повідомлення до AI</string>
     <string name="ai_chat_you">Ви</string>
     <string name="ai_chat_assistant">AI</string>
     <string name="chat_message_copied">Скопійовано</string>
@@ -110,6 +107,8 @@
     <!-- Note format toolbar -->
     <string name="note_format_bold">Жирний</string>
     <string name="note_format_list">Список</string>
+    <string name="note_editor_show_format_toolbar">Показувати панель редагування</string>
+    <string name="note_editor_show_ai_chat">Показувати ІІ чат</string>
 
     <!-- AI models -->
     <string name="ai_model_nano_desc">Швидка та економна</string>

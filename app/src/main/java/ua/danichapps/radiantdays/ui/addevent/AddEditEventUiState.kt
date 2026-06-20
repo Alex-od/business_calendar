@@ -27,11 +27,13 @@ data class AddEditEventUiState(
     val visibleAiActions: List<AiAction> = emptyList(),
     val aiSheetVisible: Boolean = false,
     val aiLoading: Boolean = false,
-    val aiResultText: String? = null,
     val aiChatMessages: List<AiChatMessage> = emptyList(),
     val aiChatLoading: Boolean = false,
 
     val canUndoDescription: Boolean = false,
 
     val isAiKeySaved: Boolean = false,
+
+    val showFormatToolbar: Boolean = true,
+    val showAiChat: Boolean = true,
 )

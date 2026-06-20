@@ -53,6 +53,7 @@ class AddEditEventViewModel(
     private val errorStrings: DomainErrorStrings,
     private val localeStore: AppLocaleStore,
     private val apiKeyStore: AiApiKeyStore,
+    private val noteEditorPreferencesStore: NoteEditorPreferencesStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddEditEventUiState())
@@ -70,8 +71,28 @@ class AddEditEventViewModel(
 
     init {
         refreshAiKeyStatus()
+        refreshNoteEditorPreferences()
         observeTags()
         observeVisibleAiActions()
+    }
+
+    fun refreshNoteEditorPreferences() {
+        _uiState.update {
+            it.copy(
+                showFormatToolbar = noteEditorPreferencesStore.isFormatToolbarVisible(),
+                showAiChat = noteEditorPreferencesStore.isAiChatVisible(),
+            )
+        }
+    }
+
+    fun onShowFormatToolbarChange(visible: Boolean) {
+        noteEditorPreferencesStore.setFormatToolbarVisible(visible)
+        _uiState.update { it.copy(showFormatToolbar = visible) }
+    }
+
+    fun onShowAiChatChange(visible: Boolean) {
+        noteEditorPreferencesStore.setAiChatVisible(visible)
+        _uiState.update { it.copy(showAiChat = visible) }
     }
 
     fun refreshAiKeyStatus() {
@@ -90,6 +111,7 @@ class AddEditEventViewModel(
 
     fun onAiActionSelected(actionGuid: String) {
         val state = _uiState.value
+        val history = state.aiChatMessages
         _uiState.update { it.copy(aiSheetVisible = false, aiLoading = true) }
         viewModelScope.launch {
             val tagNames = state.tags
@@ -102,24 +124,14 @@ class AddEditEventViewModel(
                 noteDateMillis = state.startTimeMillis,
                 locale = localeStore.resolveLocale(),
             )
-            runAiActionUseCase(actionGuid, context)
+            runAiActionUseCase(actionGuid, context, history)
                 .onSuccess { result ->
-                    val actionName = state.visibleAiActions
-                        .firstOrNull { action -> action.guid == actionGuid }
-                        ?.name
                     _uiState.update {
                         it.copy(
                             aiLoading = false,
-                            aiResultText = result.response,
-                            aiChatMessages = listOf(
-                                AiChatMessage(
-                                    role = AiChatRole.USER,
-                                    content = state.description,
-                                    apiContent = result.resolvedPrompt,
-                                    actionLabel = actionName,
-                                ),
+                            aiChatMessages = history +
+                                result.userMessage +
                                 AiChatMessage(AiChatRole.ASSISTANT, result.response),
-                            ),
                         )
                     }
                     scheduleAutoSave()
@@ -129,17 +141,6 @@ class AddEditEventViewModel(
                     _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args, exception)))
                 }
         }
-    }
-
-    fun onAiResultDismiss() {
-        _uiState.update { it.copy(aiResultText = null, aiChatMessages = emptyList()) }
-        scheduleAutoSave()
-    }
-
-    fun onAiResultContinueChat() {
-        if (_uiState.value.aiChatMessages.isEmpty()) return
-        _uiState.update { it.copy(aiResultText = null) }
-        scheduleAutoSave()
     }
 
     fun onAiChatMessageEdit(index: Int, content: String) {
@@ -158,6 +159,9 @@ class AddEditEventViewModel(
                 },
             )
         }
+        if (index == 0 && current.role == AiChatRole.USER) {
+            applyDiscreteDescriptionChange(content)
+        }
         scheduleAutoSave()
     }
 
@@ -165,8 +169,19 @@ class AddEditEventViewModel(
         if (_uiState.value.aiChatLoading) return
         val messages = _uiState.value.aiChatMessages
         if (index !in messages.indices) return
+
+        val indicesToRemove = linkedSetOf(index)
+        val message = messages[index]
+        if (message.role == AiChatRole.ASSISTANT) {
+            messages.getOrNull(index - 1)?.let { previous ->
+                if (previous.role == AiChatRole.USER && previous.actionLabel != null) {
+                    indicesToRemove.add(index - 1)
+                }
+            }
+        }
+
         _uiState.update { state ->
-            state.copy(aiChatMessages = messages.filterIndexed { i, _ -> i != index })
+            state.copy(aiChatMessages = messages.filterIndexed { i, _ -> i !in indicesToRemove })
         }
         scheduleAutoSave()
     }
@@ -206,45 +221,6 @@ class AddEditEventViewModel(
                     _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args, exception)))
                 }
         }
-    }
-
-    fun onAiChatReplace() {
-        val result = latestAssistantMessage() ?: return
-        applyDiscreteDescriptionChange(result)
-    }
-
-    fun onAiChatAppend() {
-        val result = latestAssistantMessage() ?: return
-        val current = _uiState.value.description
-        val separator = when {
-            current.isBlank() -> ""
-            current.endsWith(' ') || current.endsWith('\n') -> ""
-            else -> " "
-        }
-        applyDiscreteDescriptionChange(current + separator + result)
-    }
-
-    private fun latestAssistantMessage(): String? =
-        _uiState.value.aiChatMessages.lastOrNull { it.role == AiChatRole.ASSISTANT }?.content
-
-    fun onAiResultReplace() {
-        val result = _uiState.value.aiResultText ?: return
-        applyDiscreteDescriptionChange(result)
-        _uiState.update { it.copy(aiResultText = null) }
-        scheduleAutoSave()
-    }
-
-    fun onAiResultAppend() {
-        val result = _uiState.value.aiResultText ?: return
-        val current = _uiState.value.description
-        val separator = when {
-            current.isBlank() -> ""
-            current.endsWith(' ') || current.endsWith('\n') -> ""
-            else -> " "
-        }
-        applyDiscreteDescriptionChange(current + separator + result)
-        _uiState.update { it.copy(aiResultText = null) }
-        scheduleAutoSave()
     }
 
     fun loadEvent(id: Long) {
