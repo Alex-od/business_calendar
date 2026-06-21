@@ -1,12 +1,13 @@
 package ua.danichapps.radiantdays.ui.addevent
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
@@ -34,6 +35,8 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import ua.danichapps.radiantdays.R
+import ua.danichapps.radiantdays.domain.model.AiChatRole
+import ua.danichapps.radiantdays.domain.model.visibleContent
 import ua.danichapps.radiantdays.locale.AppLocaleStore
 import ua.danichapps.radiantdays.ui.common.NoteDisplayStyles
 import ua.danichapps.radiantdays.ui.common.NoteFormatToolbar
@@ -45,6 +48,9 @@ import ua.danichapps.radiantdays.ui.common.noteMarkdownToFieldValue
 import ua.danichapps.radiantdays.ui.common.preserveSpansOnEdit
 import ua.danichapps.radiantdays.ui.common.rememberVoiceInputLauncher
 import org.koin.compose.koinInject
+
+private val MinChatAreaHeight = 80.dp
+private val ChatDividerVerticalSpace = 12.dp
 
 @Stable
 internal class EventNoteEditorState(
@@ -165,6 +171,52 @@ internal fun rememberEventNoteEditorState(
     )
 }
 
+/** Toolbar row shared by the note editor and the chat message edit dialog. */
+@Composable
+internal fun NoteEditorToolbarRow(
+    state: EventNoteEditorState,
+    uiState: AddEditEventUiState,
+    callbacks: AddEditEventScreenCallbacks,
+    noteDisplayStyles: NoteDisplayStyles,
+    canUndo: Boolean = uiState.canUndoDescription,
+) {
+    val showFormatToolbar = uiState.showFormatToolbar
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        IconButton(
+            onClick = state.onDescriptionUndoClick,
+            enabled = canUndo,
+        ) {
+            Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = stringResource(R.string.action_undo))
+        }
+        if (showFormatToolbar) {
+            NoteFormatToolbar(
+                value = state.descriptionValue,
+                onValueChange = state::updateDescriptionValue,
+                styles = noteDisplayStyles,
+                boldTyping = state.boldTyping,
+                onBoldTypingChange = state::updateBoldTyping,
+                modifier = Modifier.weight(1f),
+            )
+        } else {
+            Spacer(Modifier.weight(1f))
+        }
+        IconButton(onClick = state.startVoiceInput) {
+            Icon(Icons.Default.Mic, contentDescription = stringResource(R.string.event_voice_input))
+        }
+        IconButton(
+            onClick = callbacks.onAiClick,
+            enabled = uiState.isAiKeySaved && state.descriptionValue.text.isNotBlank(),
+        ) {
+            Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.ai_chat_assistant))
+        }
+    }
+}
+
 /** Rich note field with toolbar, voice input, AI button, and optional chat list. */
 @Composable
 internal fun EventNoteEditor(
@@ -175,94 +227,102 @@ internal fun EventNoteEditor(
     modifier: Modifier = Modifier,
 ) {
     val bodyTextStyle = MaterialTheme.typography.bodyLarge
-    val showFormatToolbar = uiState.showFormatToolbar
     val hasAiChatContent = uiState.aiChatMessages.isNotEmpty() || uiState.aiChatLoading
     val isAiChatMessagesVisible = uiState.showAiChat && hasAiChatContent
-    val noteMaxHeightWhenChatVisible = with(LocalDensity.current) {
-        (bodyTextStyle.lineHeight.toPx() * 3).toDp()
+    val hasAiResponse = uiState.aiChatMessages.any { it.role == AiChatRole.ASSISTANT }
+    val showNoteEditor = !isAiChatMessagesVisible || !hasAiResponse
+    val oneLineHeight = with(LocalDensity.current) { bodyTextStyle.lineHeight.toDp() }
+    var editingMessageIndex by remember { mutableStateOf<Int?>(null) }
+
+    editingMessageIndex?.let { messageIndex ->
+        val message = uiState.aiChatMessages.getOrNull(messageIndex) ?: return@let
+        ChatMessageEditDialog(
+            messageIndex = messageIndex,
+            initialMarkdown = message.visibleContent(uiState.description),
+            messageRole = message.role,
+            uiState = uiState,
+            callbacks = callbacks,
+            noteDisplayStyles = noteDisplayStyles,
+            onDismiss = { editingMessageIndex = null },
+        )
     }
 
     Column(modifier = modifier) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            IconButton(
-                onClick = state.onDescriptionUndoClick,
-                enabled = uiState.canUndoDescription,
-            ) {
-                Icon(Icons.AutoMirrored.Filled.Undo, contentDescription = stringResource(R.string.action_undo))
-            }
-            if (showFormatToolbar) {
-                NoteFormatToolbar(
-                    value = state.descriptionValue,
-                    onValueChange = state::updateDescriptionValue,
-                    styles = noteDisplayStyles,
-                    boldTyping = state.boldTyping,
-                    onBoldTypingChange = state::updateBoldTyping,
-                    modifier = Modifier.weight(1f),
-                )
-            } else {
-                Spacer(Modifier.weight(1f))
-            }
-            IconButton(onClick = state.startVoiceInput) {
-                Icon(Icons.Default.Mic, contentDescription = stringResource(R.string.event_voice_input))
-            }
-            IconButton(
-                onClick = callbacks.onAiClick,
-                enabled = uiState.isAiKeySaved && state.descriptionValue.text.isNotBlank(),
-            ) {
-                Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.ai_chat_assistant))
-            }
-        }
+        NoteEditorToolbarRow(
+            state = state,
+            uiState = uiState,
+            callbacks = callbacks,
+            noteDisplayStyles = noteDisplayStyles,
+        )
 
         Column(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth(),
         ) {
-            if (isAiChatMessagesVisible) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(noteMaxHeightWhenChatVisible),
-                ) {
+            if (showNoteEditor) {
+                if (isAiChatMessagesVisible) {
+                    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+                        val maxNoteHeight = (maxHeight - MinChatAreaHeight - ChatDividerVerticalSpace)
+                            .coerceAtLeast(oneLineHeight)
+                        val lineCount = state.descriptionValue.text.lineSequence().count().coerceAtLeast(1)
+                        val estimatedNoteHeight = oneLineHeight * lineCount
+                        val needsScroll = estimatedNoteHeight > maxNoteHeight
+                        RichNoteTextField(
+                            value = state.descriptionValue,
+                            onFocusChange = state::onFocusChange,
+                            onValueChange = state::onValueChange,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(
+                                    min = oneLineHeight,
+                                    max = if (needsScroll) {
+                                        maxNoteHeight
+                                    } else {
+                                        estimatedNoteHeight.coerceAtMost(maxNoteHeight)
+                                    },
+                                ),
+                            textStyle = bodyTextStyle,
+                            minLines = 1,
+                            scrollEnabled = needsScroll,
+                        )
+                    }
+                } else {
                     RichNoteTextField(
                         value = state.descriptionValue,
                         onFocusChange = state::onFocusChange,
                         onValueChange = state::onValueChange,
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f),
                         textStyle = bodyTextStyle,
                         minLines = 1,
                     )
                 }
-            } else {
-                RichNoteTextField(
-                    value = state.descriptionValue,
-                    onFocusChange = state::onFocusChange,
-                    onValueChange = state::onValueChange,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    textStyle = bodyTextStyle,
-                    minLines = 1,
-                )
             }
 
             if (isAiChatMessagesVisible) {
-                HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+                if (showNoteEditor) {
+                    HorizontalDivider(modifier = Modifier.padding(top = 8.dp, bottom = 4.dp))
+                }
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .fillMaxWidth(),
+                        .fillMaxWidth()
+                        .then(
+                            if (showNoteEditor) {
+                                Modifier.heightIn(min = MinChatAreaHeight)
+                            } else {
+                                Modifier
+                            },
+                        ),
                 ) {
                     InlineAiChatMessages(
                         messages = uiState.aiChatMessages,
                         noteDescription = uiState.description,
+                        hasAiResponse = hasAiResponse,
                         loading = uiState.aiChatLoading,
-                        onMessageEdit = callbacks.onAiChatMessageEdit,
+                        onMessageClick = { editingMessageIndex = it },
                         onMessageDelete = callbacks.onAiChatMessageDelete,
                         onMessageCopied = callbacks.onAiChatMessageCopied,
                         modifier = Modifier.fillMaxSize(),

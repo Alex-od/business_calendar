@@ -45,6 +45,7 @@ private fun EventNoteEditorWithAiChatPreview() {
             description = PREVIEW_DESCRIPTION,
             canUndoDescription = true,
             isAiKeySaved = true,
+            showAiChat = true,
             aiChatMessages = listOf(
                 AiChatMessage(AiChatRole.USER, PREVIEW_DESCRIPTION),
                 AiChatMessage(

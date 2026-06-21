@@ -16,7 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -31,17 +30,27 @@ private data class IndexedChatMessage(
     val message: AiChatMessage,
 )
 
-/** Action label of the first user message when it mirrors the note text. */
-private fun List<AiChatMessage>.hiddenFirstActionLabel(): String? =
-    firstOrNull()
-        ?.takeIf { it.role == AiChatRole.USER && it.actionLabel != null }
-        ?.actionLabel
+/** Action label of the first user message when it mirrors the note text and is hidden. */
+private fun List<AiChatMessage>.hiddenFirstActionLabel(
+    noteDescription: String,
+    hasAiResponse: Boolean,
+): String? {
+    if (hasAiResponse) return null
+    val first = firstOrNull() ?: return null
+    if (first.role != AiChatRole.USER || first.actionLabel == null) return null
+    if (!first.shouldHideAsNoteMirror(noteDescription)) return null
+    return first.actionLabel
+}
 
-/** Messages to render, excluding the hidden first action prompt or note mirror. */
-private fun List<AiChatMessage>.visibleIndexedMessages(noteDescription: String): List<IndexedChatMessage> =
+/** Messages to render; after an AI reply the first user message is always shown as a bubble. */
+private fun List<AiChatMessage>.visibleIndexedMessages(
+    noteDescription: String,
+    hasAiResponse: Boolean,
+): List<IndexedChatMessage> =
     mapIndexed { index, message -> IndexedChatMessage(index, message) }
         .filter { (index, message) ->
-            !(index == 0 && message.role == AiChatRole.USER && message.shouldHideAsNoteMirror(noteDescription))
+            hasAiResponse ||
+                !(index == 0 && message.role == AiChatRole.USER && message.shouldHideAsNoteMirror(noteDescription))
         }
 
 /** True when the first user message duplicates the note and should not appear in chat. */
@@ -56,30 +65,26 @@ private fun AiChatMessage.shouldHideAsNoteMirror(noteDescription: String): Boole
 fun InlineAiChatMessages(
     messages: List<AiChatMessage>,
     noteDescription: String,
+    hasAiResponse: Boolean,
     loading: Boolean,
-    onMessageEdit: (Int, String) -> Unit,
+    onMessageClick: (Int) -> Unit,
     onMessageDelete: (Int) -> Unit,
     onMessageCopied: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    var editingIndex by remember { mutableIntStateOf(-1) }
     var menuIndex by remember { mutableIntStateOf(-1) }
-    var firstMessageExpanded by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
-    val firstMessageResetKey = messages.firstOrNull()?.let { Triple(it.apiContent, it.actionLabel, it.role) }
-    val hiddenActionLabel = remember(messages) { messages.hiddenFirstActionLabel() }
-    val visibleMessages = remember(messages, noteDescription) { messages.visibleIndexedMessages(noteDescription) }
+    val hiddenActionLabel = remember(messages, noteDescription, hasAiResponse) {
+        messages.hiddenFirstActionLabel(noteDescription, hasAiResponse)
+    }
+    val visibleMessages = remember(messages, noteDescription, hasAiResponse) {
+        messages.visibleIndexedMessages(noteDescription, hasAiResponse)
+    }
 
     LaunchedEffect(messages.isEmpty()) {
         if (messages.isEmpty()) {
-            firstMessageExpanded = false
-            editingIndex = -1
+            menuIndex = -1
         }
-    }
-
-    LaunchedEffect(firstMessageResetKey) {
-        firstMessageExpanded = false
-        if (editingIndex == 0) editingIndex = -1
     }
 
     val inPreview = LocalInspectionMode.current
@@ -104,7 +109,7 @@ fun InlineAiChatMessages(
         state = listState,
         modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
-        contentPadding = PaddingValues(bottom = 4.dp),
+        contentPadding = PaddingValues(bottom = 0.dp),
     ) {
         hiddenActionLabel?.let { label ->
             item(key = "action-label") {
@@ -119,47 +124,33 @@ fun InlineAiChatMessages(
         itemsIndexed(
             visibleMessages,
             key = { _, item -> "${item.index}-${item.message.role}" },
-        ) { visibleIndex, item ->
+        ) { _, item ->
             val displayContent = item.message.visibleContent(noteDescription)
             ChatMessageBubble(
                 state = ChatMessageBubbleState(
                     message = item.message,
                     displayContent = displayContent,
                     isFirstMessage = item.index == 0 && item.message.role == AiChatRole.USER,
-                    isFirstMessageExpanded = firstMessageExpanded,
-                    isEditing = editingIndex == item.index,
                     isMenuExpanded = menuIndex == item.index,
                     loading = loading,
                 ),
                 callbacks = ChatMessageBubbleCallbacks(
-                    onEnterEdit = {
-                        if (item.message.role == AiChatRole.USER) {
+                    onOpenEditor = {
+                        if (!loading) {
                             dismissMenu()
-                            editingIndex = item.index
+                            onMessageClick(item.index)
                         }
-                    },
-                    onExpandOnly = {
-                        dismissMenu()
-                        firstMessageExpanded = true
-                    },
-                    onExpandAndEdit = {
-                        dismissMenu()
-                        firstMessageExpanded = true
-                        editingIndex = item.index
                     },
                     onDismissMenu = ::dismissMenu,
                     onShowMenu = {
                         if (!loading) menuIndex = item.index
                     },
-                    onContentChange = { onMessageEdit(item.index, it) },
-                    onFinishEdit = { editingIndex = -1 },
                     onCopy = {
                         dismissMenu()
                         onMessageCopied()
                     },
                     onDelete = {
                         dismissMenu()
-                        if (editingIndex == item.index) editingIndex = -1
                         onMessageDelete(item.index)
                     },
                 ),

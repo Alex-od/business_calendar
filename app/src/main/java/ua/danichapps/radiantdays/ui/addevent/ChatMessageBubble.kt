@@ -10,9 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -20,21 +17,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import ua.danichapps.radiantdays.R
@@ -51,25 +39,19 @@ internal data class ChatMessageBubbleState(
     val message: AiChatMessage,
     val displayContent: String,
     val isFirstMessage: Boolean,
-    val isFirstMessageExpanded: Boolean,
-    val isEditing: Boolean,
     val isMenuExpanded: Boolean,
     val loading: Boolean,
 )
 
 internal data class ChatMessageBubbleCallbacks(
-    val onEnterEdit: () -> Unit,
-    val onExpandOnly: () -> Unit,
-    val onExpandAndEdit: () -> Unit,
+    val onOpenEditor: () -> Unit,
     val onDismissMenu: () -> Unit,
     val onShowMenu: () -> Unit,
-    val onContentChange: (String) -> Unit,
-    val onFinishEdit: () -> Unit,
     val onCopy: () -> Unit,
     val onDelete: () -> Unit,
 )
 
-/** Single chat bubble with inline edit, collapse, and context menu. */
+/** Single chat bubble; tap opens the full-screen editor, long-press shows actions. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun ChatMessageBubble(
@@ -79,13 +61,9 @@ internal fun ChatMessageBubble(
     val message = state.message
     val displayContent = state.displayContent
     val isFirstMessage = state.isFirstMessage
-    val isFirstMessageExpanded = state.isFirstMessageExpanded
-    val isEditing = state.isEditing
     val isMenuExpanded = state.isMenuExpanded
     val loading = state.loading
     val isUser = message.role == AiChatRole.USER
-    val canEdit = isUser
-    val isEditingMessage = canEdit && isEditing
     val alignment = if (isUser) Alignment.CenterEnd else Alignment.CenterStart
     val bubbleColor = if (isUser) {
         MaterialTheme.colorScheme.primaryContainer
@@ -98,23 +76,9 @@ internal fun ChatMessageBubble(
         MaterialTheme.colorScheme.onSurfaceVariant
     }
     val clipboardManager = LocalClipboardManager.current
-    var draft by remember(displayContent) { mutableStateOf(displayContent) }
-    val focusRequester = remember { FocusRequester() }
-    var hadFocus by remember(isEditingMessage) { mutableStateOf(false) }
     val isLongText = isLongChatText(displayContent)
-    val showCollapsed = isUser && isFirstMessage && isLongText && !isFirstMessageExpanded && !isEditingMessage
-    val useFullWidth = !isUser || (isFirstMessage && (isFirstMessageExpanded || isEditingMessage))
-
-    LaunchedEffect(displayContent, isEditingMessage) {
-        if (!isEditingMessage) draft = displayContent
-    }
-
-    LaunchedEffect(isEditingMessage) {
-        if (isEditingMessage) {
-            hadFocus = false
-            focusRequester.requestFocus()
-        }
-    }
+    val showCollapsed = isUser && isFirstMessage && isLongText
+    val useFullWidth = !isUser || isFirstMessage
 
     Box(
         modifier = Modifier.fillMaxWidth(),
@@ -138,55 +102,21 @@ internal fun ChatMessageBubble(
                 Spacer(Modifier.height(4.dp))
             }
             Box {
-                val bubbleModifier = if (isEditingMessage) {
-                    Modifier
-                } else {
-                    Modifier.combinedClickable(
-                        enabled = !loading,
-                        onClick = when {
-                            canEdit && isFirstMessage -> callbacks.onExpandAndEdit
-                            canEdit -> callbacks.onEnterEdit
-                            else -> ({})
-                        },
-                        onLongClick = callbacks.onShowMenu,
-                    )
-                }
                 Surface(
                     shape = RoundedCornerShape(16.dp),
                     color = bubbleColor,
-                    modifier = bubbleModifier,
+                    modifier = Modifier.combinedClickable(
+                        enabled = !loading,
+                        onClick = callbacks.onOpenEditor,
+                        onLongClick = callbacks.onShowMenu,
+                    ),
                 ) {
-                    if (isEditingMessage) {
-                        BasicTextField(
-                            value = draft,
-                            onValueChange = {
-                                draft = it
-                                callbacks.onContentChange(it)
-                            },
-                            textStyle = MaterialTheme.typography.bodyMedium.copy(color = textColor),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                            keyboardActions = KeyboardActions(onDone = { callbacks.onFinishEdit() }),
-                            minLines = if (isFirstMessage) 6 else 1,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 10.dp)
-                                .focusRequester(focusRequester)
-                                .onFocusChanged { focus ->
-                                    if (focus.isFocused) {
-                                        hadFocus = true
-                                    } else if (hadFocus && isEditingMessage) {
-                                        callbacks.onFinishEdit()
-                                    }
-                                },
-                        )
-                    } else {
-                        ChatBubbleText(
-                            text = displayContent,
-                            textColor = textColor,
-                            selectable = !canEdit,
-                            showCollapsed = showCollapsed,
-                        )
-                    }
+                    ChatBubbleText(
+                        text = displayContent,
+                        textColor = textColor,
+                        selectable = false,
+                        showCollapsed = showCollapsed,
+                    )
                 }
 
                 DropdownMenu(
@@ -210,7 +140,7 @@ internal fun ChatMessageBubble(
     }
 }
 
-/** Read-only bubble text, optionally collapsed and selectable. */
+/** Read-only bubble text, optionally collapsed. */
 @Composable
 private fun ChatBubbleText(
     text: String,

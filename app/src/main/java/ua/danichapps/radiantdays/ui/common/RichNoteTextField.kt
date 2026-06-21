@@ -17,6 +17,7 @@ fun RichNoteTextField(
     textStyle: TextStyle,
     modifier: Modifier = Modifier,
     minLines: Int = 1,
+    scrollEnabled: Boolean = true,
 ) {
     val scrollState = rememberScrollState()
     BasicTextField(
@@ -24,7 +25,7 @@ fun RichNoteTextField(
         onValueChange = onValueChange,
         textStyle = textStyle,
         modifier = modifier
-            .verticalScroll(scrollState)
+            .then(if (scrollEnabled) Modifier.verticalScroll(scrollState) else Modifier)
             .onFocusChanged { state -> onFocusChange(state.isFocused) },
         minLines = minLines,
     )
