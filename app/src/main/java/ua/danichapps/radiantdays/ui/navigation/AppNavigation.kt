@@ -1,11 +1,16 @@
 package ua.danichapps.radiantdays.ui.navigation
 
+import android.app.Activity
+import androidx.activity.compose.BackHandler
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import ua.danichapps.radiantdays.ui.addevent.AddEditEventScreen
@@ -21,6 +26,7 @@ fun AppNavigation(
     onPendingEditEventConsumed: () -> Unit = {},
 ) {
     val navController = rememberNavController()
+    val activity = LocalContext.current as? Activity
 
     LaunchedEffect(pendingEditEventId) {
         val eventId = pendingEditEventId ?: return@LaunchedEffect
@@ -154,5 +160,12 @@ fun AppNavigation(
                 },
             )
         }
+    }
+
+    val backStackEntry by navController.currentBackStackEntryAsState()
+    val isAtRoot = backStackEntry != null && navController.previousBackStackEntry == null
+
+    BackHandler(enabled = isAtRoot) {
+        activity?.finish()
     }
 }

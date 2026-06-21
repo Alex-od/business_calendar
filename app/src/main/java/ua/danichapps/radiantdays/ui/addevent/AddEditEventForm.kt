@@ -63,7 +63,7 @@ internal fun EventForm(
         onVoiceInputUnavailable = callbacks.onVoiceInputUnavailable,
     )
 
-    val horizontalPadding = 16.dp
+    val horizontalPadding = 4.dp
 
     AlarmReminderDrawer(
         modifier = modifier
