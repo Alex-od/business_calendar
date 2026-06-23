@@ -46,6 +46,7 @@ import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
 import ua.danichapps.radiantdays.BuildConfig
 import ua.danichapps.radiantdays.R
+import ua.danichapps.radiantdays.ui.theme.AppThemeMode
 
 private val SettingsDrawerWidth = 280.dp
 
@@ -58,7 +59,7 @@ fun SettingsDrawer(
     tagFilterActiveCount: Int = 0,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = koinViewModel(),
-    content: @Composable (openSettingsDrawer: () -> Unit) -> Unit,
+    content: @Composable () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -84,10 +85,6 @@ fun SettingsDrawer(
         scope.launch { drawerState.close() }
     }
 
-    val openSettingsDrawer: () -> Unit = {
-        scope.launch { drawerState.open() }
-    }
-
     var showAiLogScreen by remember { mutableStateOf(false) }
 
     ModalNavigationDrawer(
@@ -101,6 +98,7 @@ fun SettingsDrawer(
                 SettingsPanelContent(
                     uiState = uiState,
                     onLanguageSelected = viewModel::onLanguageSelected,
+                    onThemeModeSelected = viewModel::onThemeModeSelected,
                     onOpenAiSettings = {
                         scope.launch {
                             drawerState.close()
@@ -132,7 +130,7 @@ fun SettingsDrawer(
         },
     ) {
         Box(Modifier.fillMaxSize()) {
-            content(openSettingsDrawer)
+            content()
             SnackbarHost(
                 hostState = snackbarHostState,
                 modifier = Modifier.align(Alignment.BottomCenter),
@@ -148,6 +146,7 @@ fun SettingsDrawer(
 internal fun SettingsPanelContent(
     uiState: SettingsUiState,
     onLanguageSelected: (String?) -> Unit,
+    onThemeModeSelected: (AppThemeMode) -> Unit,
     onOpenAiSettings: () -> Unit,
     onOpenTags: () -> Unit,
     onOpenTagFilter: () -> Unit = {},
@@ -163,6 +162,12 @@ internal fun SettingsPanelContent(
             AppLanguageSelector(
                 selectedTag = uiState.selectedLanguageTag,
                 onLanguageSelected = onLanguageSelected,
+            )
+        }
+        item {
+            AppThemeSelector(
+                selectedMode = uiState.selectedThemeMode,
+                onThemeModeSelected = onThemeModeSelected,
             )
         }
         item {

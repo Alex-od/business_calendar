@@ -41,6 +41,10 @@
     <!-- Settings -->
     <string name="settings_title">Настройки</string>
     <string name="settings_section_language">Язык</string>
+    <string name="settings_section_theme">Тема</string>
+    <string name="theme_system">Системная</string>
+    <string name="theme_light">Светлая</string>
+    <string name="theme_dark">Тёмная</string>
     <string name="settings_section_ai">Искусственный интеллект</string>
     <string name="settings_tags">Теги</string>
     <string name="settings_tag_filter">Фильтр</string>

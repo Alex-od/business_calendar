@@ -26,7 +26,6 @@ import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -118,7 +117,7 @@ fun CalendarScreen(
         onOpenTags = onOpenTags,
         onOpenTagFilter = { showTagFilterDialog = true },
         tagFilterActiveCount = uiState.selectedFilterTagGuids.size,
-    ) { openSettingsDrawer ->
+    ) {
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
             floatingActionButton = {
@@ -141,9 +140,8 @@ fun CalendarScreen(
                     MonthHeader(
                         currentMonthMillis = uiState.currentMonthMillis,
                         locale = locale,
-                        onOpenSettings = openSettingsDrawer,
-                        onPrevious         = viewModel::navigateToPreviousMonth,
-                        onNext             = viewModel::navigateToNextMonth,
+                        onPrevious = viewModel::navigateToPreviousMonth,
+                        onNext     = viewModel::navigateToNextMonth,
                     )
                     WeekDayHeaders(locale = locale)
                     MonthGrid(
@@ -191,7 +189,6 @@ fun CalendarScreen(
 private fun MonthHeader(
     currentMonthMillis: Long,
     locale: Locale,
-    onOpenSettings: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
 ) {
@@ -202,9 +199,6 @@ private fun MonthHeader(
         modifier              = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
         verticalAlignment     = Alignment.CenterVertically,
     ) {
-        IconButton(onClick = onOpenSettings) {
-            Icon(Icons.Default.Settings, contentDescription = stringResource(R.string.calendar_settings))
-        }
         IconButton(onClick = onPrevious) {
             Icon(Icons.Default.ChevronLeft, contentDescription = stringResource(R.string.calendar_previous_month))
         }

@@ -14,11 +14,14 @@ import ua.danichapps.radiantdays.ai.AiApiKeyStore
 import ua.danichapps.radiantdays.ai.AiModels
 import ua.danichapps.radiantdays.locale.AppLocaleManager
 import ua.danichapps.radiantdays.locale.AppLocaleStore
+import ua.danichapps.radiantdays.ui.theme.AppThemeMode
+import ua.danichapps.radiantdays.ui.theme.AppThemeStore
 
 class SettingsViewModel(
     private val apiKeyStore: AiApiKeyStore,
     private val localeStore: AppLocaleStore,
     private val localeManager: AppLocaleManager,
+    private val themeStore: AppThemeStore,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(SettingsUiState())
@@ -29,6 +32,7 @@ class SettingsViewModel(
 
     init {
         refreshLanguage()
+        refreshTheme()
         refreshAiSummary()
     }
 
@@ -42,6 +46,12 @@ class SettingsViewModel(
         }
     }
 
+    fun onThemeModeSelected(mode: AppThemeMode) {
+        if (mode == _uiState.value.selectedThemeMode) return
+        themeStore.saveMode(mode)
+        _uiState.update { it.copy(selectedThemeMode = themeStore.getMode()) }
+    }
+
     fun refreshAiSummary() {
         val modelDisplayName = if (apiKeyStore.hasKey()) {
             AiModels.findById(apiKeyStore.getModelId())?.displayName
@@ -53,5 +63,9 @@ class SettingsViewModel(
 
     private fun refreshLanguage() {
         _uiState.update { it.copy(selectedLanguageTag = localeStore.getTag()) }
+    }
+
+    private fun refreshTheme() {
+        _uiState.update { it.copy(selectedThemeMode = themeStore.getMode()) }
     }
 }
