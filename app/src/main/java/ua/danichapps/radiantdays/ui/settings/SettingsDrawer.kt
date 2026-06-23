@@ -2,31 +2,21 @@ package ua.danichapps.radiantdays.ui.settings
 
 import android.app.Activity
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.ui.Alignment
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.ListItem
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -42,9 +32,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import org.koin.androidx.compose.koinViewModel
-import ua.danichapps.radiantdays.BuildConfig
 import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.ui.theme.AppThemeMode
 
@@ -62,16 +52,17 @@ fun SettingsDrawer(
     content: @Composable () -> Unit,
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val snackbarHostState = remember { SnackbarHostState() }
     val activity = LocalContext.current as? Activity
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    var showAiLogScreen by remember { mutableStateOf(false) }
+
+    val closeDrawerAndThen = rememberCloseDrawerAndThen(scope, drawerState)
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is SettingsUiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
-                is SettingsUiEvent.LocaleChanged -> activity?.recreate()
+                SettingsUiEvent.LocaleChanged -> activity?.recreate()
             }
         }
     }
@@ -85,8 +76,6 @@ fun SettingsDrawer(
         scope.launch { drawerState.close() }
     }
 
-    var showAiLogScreen by remember { mutableStateOf(false) }
-
     ModalNavigationDrawer(
         modifier = modifier,
         drawerState = drawerState,
@@ -99,31 +88,11 @@ fun SettingsDrawer(
                     uiState = uiState,
                     onLanguageSelected = viewModel::onLanguageSelected,
                     onThemeModeSelected = viewModel::onThemeModeSelected,
-                    onOpenAiSettings = {
-                        scope.launch {
-                            drawerState.close()
-                            onOpenAiSettings()
-                        }
-                    },
-                    onOpenTags = {
-                        scope.launch {
-                            drawerState.close()
-                            onOpenTags()
-                        }
-                    },
-                    onOpenTagFilter = {
-                        scope.launch {
-                            drawerState.close()
-                            onOpenTagFilter()
-                        }
-                    },
+                    onOpenAiSettings = { closeDrawerAndThen(onOpenAiSettings) },
+                    onOpenTags = { closeDrawerAndThen(onOpenTags) },
+                    onOpenTagFilter = { closeDrawerAndThen(onOpenTagFilter) },
                     tagFilterActiveCount = tagFilterActiveCount,
-                    onShowAiLogs = {
-                        scope.launch {
-                            drawerState.close()
-                            showAiLogScreen = true
-                        }
-                    },
+                    onShowAiLogs = { closeDrawerAndThen { showAiLogScreen = true } },
                     modifier = Modifier.fillMaxHeight(),
                 )
             }
@@ -131,13 +100,23 @@ fun SettingsDrawer(
     ) {
         Box(Modifier.fillMaxSize()) {
             content()
-            SnackbarHost(
-                hostState = snackbarHostState,
-                modifier = Modifier.align(Alignment.BottomCenter),
-            )
             if (showAiLogScreen) {
                 AiApiLogScreen(onDismiss = { showAiLogScreen = false })
             }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun rememberCloseDrawerAndThen(
+    scope: CoroutineScope,
+    drawerState: DrawerState,
+): (action: () -> Unit) -> Unit = remember(scope, drawerState) {
+    { action ->
+        scope.launch {
+            drawerState.close()
+            action()
         }
     }
 }
@@ -197,14 +176,8 @@ internal fun SettingsPanelContent(
                 onClick = onOpenTagFilter,
             )
         }
-        if (BuildConfig.DEBUG) {
-            item {
-                SettingsNavigationItem(
-                    headline = stringResource(R.string.settings_show_ai_logs),
-                    icon = Icons.Default.Description,
-                    onClick = onShowAiLogs,
-                )
-            }
+        item {
+            DebugAiLogsSideMenuItem(onClick = onShowAiLogs)
         }
     }
 }
@@ -216,25 +189,10 @@ private fun SettingsNavigationItem(
     onClick: () -> Unit,
     supporting: String? = null,
 ) {
-    ListItem(
-        modifier = Modifier.clickable(onClick = onClick),
-        headlineContent = { Text(headline) },
-        supportingContent = supporting?.let { name ->
-            { Text(name) }
-        },
-        leadingContent = {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
-        trailingContent = {
-            Icon(
-                Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        },
+    SettingsListItem(
+        headline = headline,
+        supporting = supporting,
+        icon = icon,
+        onClick = onClick,
     )
 }
