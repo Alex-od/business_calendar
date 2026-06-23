@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -16,11 +17,14 @@ import ua.danichapps.radiantdays.calendar.dayWindow
 import ua.danichapps.radiantdays.calendar.monthWindow
 import ua.danichapps.radiantdays.calendar.normaliseToDayStart
 import ua.danichapps.radiantdays.domain.model.MessageKey
+import ua.danichapps.radiantdays.domain.model.Tag
+import ua.danichapps.radiantdays.domain.model.matchesTagFilter
 import ua.danichapps.radiantdays.domain.model.onError
 import ua.danichapps.radiantdays.domain.model.onSuccess
 import ua.danichapps.radiantdays.domain.usecase.DeleteEventUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetEventsForDayUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetEventsForMonthUseCase
+import ua.danichapps.radiantdays.domain.usecase.GetTagsUseCase
 import ua.danichapps.radiantdays.locale.DomainErrorStrings
 import ua.danichapps.radiantdays.notification.AlarmScheduler
 import ua.danichapps.radiantdays.widget.CalendarWidgetUpdater
@@ -29,6 +33,7 @@ import java.util.Calendar
 class CalendarViewModel(
     private val getEventsForDayUseCase: GetEventsForDayUseCase,
     private val getEventsForMonthUseCase: GetEventsForMonthUseCase,
+    private val getTagsUseCase: GetTagsUseCase,
     private val deleteEventUseCase: DeleteEventUseCase,
     private val alarmScheduler: AlarmScheduler,
     private val widgetUpdater: CalendarWidgetUpdater,
@@ -41,6 +46,8 @@ class CalendarViewModel(
     private val _events = Channel<CalendarUiEvent>(Channel.BUFFERED)
     val events: Flow<CalendarUiEvent> = _events.receiveAsFlow()
 
+    private val _selectedFilterTagGuids = MutableStateFlow<Set<String>>(emptySet())
+
     private var eventsJob: Job? = null
     private var monthEventsJob: Job? = null
 
@@ -48,6 +55,24 @@ class CalendarViewModel(
         val nowMillis = System.currentTimeMillis()
         selectDay(nowMillis)
         loadMonthEvents(nowMillis)
+        observeFilterTags()
+    }
+
+    fun toggleFilterTag(guid: String) {
+        _selectedFilterTagGuids.update { current ->
+            when {
+                guid in current -> current - guid
+                Tag.isUntaggedFilter(guid) -> setOf(guid)
+                current.any { Tag.isUntaggedFilter(it) } -> (current - Tag.UNTAGGED_GUID) + guid
+                else -> current + guid
+            }
+        }
+        syncFilterToUiState()
+    }
+
+    fun clearTagFilter() {
+        _selectedFilterTagGuids.value = emptySet()
+        syncFilterToUiState()
     }
 
     fun selectDay(dayMillis: Long) {
@@ -56,7 +81,12 @@ class CalendarViewModel(
 
         eventsJob?.cancel()
         eventsJob = viewModelScope.launch {
-            getEventsForDayUseCase(start, end)
+            combine(
+                getEventsForDayUseCase(start, end),
+                _selectedFilterTagGuids,
+            ) { events, filter ->
+                events.filter { it.matchesTagFilter(filter) }
+            }
                 .catch { e ->
                     _uiState.update { it.copy(isLoading = false) }
                     _events.send(
@@ -65,8 +95,8 @@ class CalendarViewModel(
                         ),
                     )
                 }
-                .collect { events ->
-                    _uiState.update { it.copy(eventsForDay = events, isLoading = false) }
+                .collect { filtered ->
+                    _uiState.update { it.copy(eventsForDay = filtered, isLoading = false) }
                 }
         }
     }
@@ -101,7 +131,14 @@ class CalendarViewModel(
 
         monthEventsJob?.cancel()
         monthEventsJob = viewModelScope.launch {
-            getEventsForMonthUseCase(start, end)
+            combine(
+                getEventsForMonthUseCase(start, end),
+                _selectedFilterTagGuids,
+            ) { events, filter ->
+                events
+                    .filter { it.matchesTagFilter(filter) }
+                    .groupBy { event -> normaliseToDayStart(event.startTimeMillis) }
+            }
                 .catch { e ->
                     _events.send(
                         CalendarUiEvent.ShowError(
@@ -109,10 +146,37 @@ class CalendarViewModel(
                         ),
                     )
                 }
-                .collect { events ->
-                    val grouped = events.groupBy { event -> normaliseToDayStart(event.startTimeMillis) }
+                .collect { grouped ->
                     _uiState.update { it.copy(eventsForMonth = grouped) }
                 }
+        }
+    }
+
+    private fun observeFilterTags() {
+        viewModelScope.launch {
+            getTagsUseCase()
+                .catch {
+                    _events.send(
+                        CalendarUiEvent.ShowError(
+                            errorStrings.resolve(MessageKey.LOAD_TAGS_FAILED),
+                        ),
+                    )
+                }
+                .collect { tags ->
+                    val dialogTags = listOf(Tag.untaggedFilter()) + tags
+                    val validGuids = dialogTags.map { it.guid }.toSet()
+                    _selectedFilterTagGuids.update { it.intersect(validGuids) }
+                    syncFilterToUiState(dialogTags)
+                }
+        }
+    }
+
+    private fun syncFilterToUiState(dialogTags: List<Tag> = _uiState.value.filterDialogTags) {
+        _uiState.update {
+            it.copy(
+                selectedFilterTagGuids = _selectedFilterTagGuids.value,
+                filterDialogTags = dialogTags,
+            )
         }
     }
 }

@@ -1,6 +1,7 @@
 package ua.danichapps.radiantdays.ui.calendar
 
 import ua.danichapps.radiantdays.domain.model.CalendarEvent
+import ua.danichapps.radiantdays.domain.model.Tag
 
 /**
  * Immutable snapshot of the calendar screen state.
@@ -21,4 +22,6 @@ data class CalendarUiState(
     val eventsForDay: List<CalendarEvent> = emptyList(),
     val eventsForMonth: Map<Long, List<CalendarEvent>> = emptyMap(),
     val isLoading: Boolean = false,
+    val selectedFilterTagGuids: Set<String> = emptySet(),
+    val filterDialogTags: List<Tag> = emptyList(),
 )

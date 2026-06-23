@@ -42,7 +42,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -69,6 +71,7 @@ import ua.danichapps.radiantdays.calendar.buildMonthDays
 import ua.danichapps.radiantdays.calendar.sameDay
 import ua.danichapps.radiantdays.domain.model.CalendarEvent
 import ua.danichapps.radiantdays.domain.model.displayHeadline
+import ua.danichapps.radiantdays.ui.common.dialog.TagFilterDialog
 import ua.danichapps.radiantdays.ui.settings.SettingsDrawer
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -99,6 +102,7 @@ fun CalendarScreen(
     val locale = remember(context) { localeStore.resolveLocale(context) }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
+    var showTagFilterDialog by remember { mutableStateOf(false) }
 
     // FIX #1/#2: consume one-shot events from the Channel (not from UiState fields)
     LaunchedEffect(Unit) {
@@ -112,6 +116,8 @@ fun CalendarScreen(
     SettingsDrawer(
         onOpenAiSettings = onOpenAiSettings,
         onOpenTags = onOpenTags,
+        onOpenTagFilter = { showTagFilterDialog = true },
+        tagFilterActiveCount = uiState.selectedFilterTagGuids.size,
     ) { openSettingsDrawer ->
         Scaffold(
             snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -160,6 +166,7 @@ fun CalendarScreen(
                         EventListForDay(
                             events        = uiState.eventsForDay,
                             locale        = locale,
+                            isFilterActive = uiState.selectedFilterTagGuids.isNotEmpty(),
                             onEditEvent   = onEditEvent,
                             onDeleteEvent = viewModel::deleteEvent,
                         )
@@ -167,6 +174,16 @@ fun CalendarScreen(
                 }
             }
         }
+    }
+
+    if (showTagFilterDialog) {
+        TagFilterDialog(
+            tags = uiState.filterDialogTags,
+            selectedGuids = uiState.selectedFilterTagGuids,
+            onToggleTag = viewModel::toggleFilterTag,
+            onClear = viewModel::clearTagFilter,
+            onDismiss = { showTagFilterDialog = false },
+        )
     }
 }
 
@@ -336,6 +353,7 @@ private fun MonthGrid(
 private fun EventListForDay(
     events: List<CalendarEvent>,
     locale: Locale,
+    isFilterActive: Boolean,
     onEditEvent: (Long) -> Unit,
     onDeleteEvent: (Long) -> Unit,
 ) {
@@ -345,7 +363,9 @@ private fun EventListForDay(
             contentAlignment = Alignment.Center,
         ) {
             Text(
-                text  = stringResource(R.string.calendar_no_events),
+                text  = stringResource(
+                    if (isFilterActive) R.string.calendar_no_events_for_filter else R.string.calendar_no_events,
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

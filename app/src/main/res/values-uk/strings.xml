@@ -31,6 +31,10 @@
     <string name="calendar_previous_month">Попередній місяць</string>
     <string name="calendar_next_month">Наступний місяць</string>
     <string name="calendar_no_events">Немає подій на цей день</string>
+    <string name="calendar_no_events_for_filter">Немає нотаток за фільтром</string>
+    <string name="calendar_filter_title">Фільтр за тегами</string>
+    <string name="calendar_filter_hint">Показуються нотатки з усіма вибраними тегами</string>
+    <string name="calendar_filter_active_count">Вибрано: %d</string>
     <string name="calendar_all_day">Весь день</string>
     <string name="calendar_delete_event">Видалити подію</string>
 
@@ -39,6 +43,7 @@
     <string name="settings_section_language">Мова</string>
     <string name="settings_section_ai">Штучний інтелект</string>
     <string name="settings_tags">Теги</string>
+    <string name="settings_tag_filter">Фільтр</string>
     <string name="settings_openai_api_key">OpenAI API Key</string>
     <string name="settings_api_key_hint">Ключ з platform.openai.com/api-keys</string>
     <string name="settings_api_not_added">Не додано</string>

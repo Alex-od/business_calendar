@@ -31,6 +31,10 @@
     <string name="calendar_previous_month">Предыдущий месяц</string>
     <string name="calendar_next_month">Следующий месяц</string>
     <string name="calendar_no_events">Нет событий на этот день</string>
+    <string name="calendar_no_events_for_filter">Нет заметок по фильтру</string>
+    <string name="calendar_filter_title">Фильтр по тегам</string>
+    <string name="calendar_filter_hint">Показываются заметки со всеми выбранными тегами</string>
+    <string name="calendar_filter_active_count">Выбрано: %d</string>
     <string name="calendar_all_day">Весь день</string>
     <string name="calendar_delete_event">Удалить событие</string>
 
@@ -39,6 +43,7 @@
     <string name="settings_section_language">Язык</string>
     <string name="settings_section_ai">Искусственный интеллект</string>
     <string name="settings_tags">Теги</string>
+    <string name="settings_tag_filter">Фильтр</string>
     <string name="settings_openai_api_key">OpenAI API Key</string>
     <string name="settings_api_key_hint">Ключ с platform.openai.com/api-keys</string>
     <string name="settings_api_not_added">Не добавлен</string>

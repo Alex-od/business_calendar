@@ -34,6 +34,7 @@ val presentationModule = module {
         CalendarViewModel(
             getEventsForDayUseCase = get(),
             getEventsForMonthUseCase = get(),
+            getTagsUseCase = get(),
             deleteEventUseCase = get(),
             alarmScheduler = get(),
             widgetUpdater = get(),

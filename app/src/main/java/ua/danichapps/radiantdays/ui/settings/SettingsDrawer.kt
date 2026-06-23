@@ -16,6 +16,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -53,6 +54,8 @@ private val SettingsDrawerWidth = 280.dp
 fun SettingsDrawer(
     onOpenAiSettings: () -> Unit,
     onOpenTags: () -> Unit,
+    onOpenTagFilter: () -> Unit = {},
+    tagFilterActiveCount: Int = 0,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = koinViewModel(),
     content: @Composable (openSettingsDrawer: () -> Unit) -> Unit,
@@ -110,6 +113,13 @@ fun SettingsDrawer(
                             onOpenTags()
                         }
                     },
+                    onOpenTagFilter = {
+                        scope.launch {
+                            drawerState.close()
+                            onOpenTagFilter()
+                        }
+                    },
+                    tagFilterActiveCount = tagFilterActiveCount,
                     onShowAiLogs = {
                         scope.launch {
                             drawerState.close()
@@ -140,6 +150,8 @@ internal fun SettingsPanelContent(
     onLanguageSelected: (String?) -> Unit,
     onOpenAiSettings: () -> Unit,
     onOpenTags: () -> Unit,
+    onOpenTagFilter: () -> Unit = {},
+    tagFilterActiveCount: Int = 0,
     onShowAiLogs: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
@@ -166,6 +178,18 @@ internal fun SettingsPanelContent(
                 headline = stringResource(R.string.settings_tags),
                 icon = Icons.AutoMirrored.Filled.Label,
                 onClick = onOpenTags,
+            )
+        }
+        item {
+            SettingsNavigationItem(
+                headline = stringResource(R.string.settings_tag_filter),
+                supporting = if (tagFilterActiveCount > 0) {
+                    stringResource(R.string.calendar_filter_active_count, tagFilterActiveCount)
+                } else {
+                    null
+                },
+                icon = Icons.Default.FilterList,
+                onClick = onOpenTagFilter,
             )
         }
         if (BuildConfig.DEBUG) {

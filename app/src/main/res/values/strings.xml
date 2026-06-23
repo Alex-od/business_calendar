@@ -31,6 +31,10 @@
     <string name="calendar_previous_month">Previous month</string>
     <string name="calendar_next_month">Next month</string>
     <string name="calendar_no_events">No events for this day</string>
+    <string name="calendar_no_events_for_filter">No notes matching the filter</string>
+    <string name="calendar_filter_title">Filter by tags</string>
+    <string name="calendar_filter_hint">Notes with all selected tags are shown</string>
+    <string name="calendar_filter_active_count">%d selected</string>
     <string name="calendar_all_day">All day</string>
     <string name="calendar_delete_event">Delete event</string>
 
@@ -39,6 +43,7 @@
     <string name="settings_section_language">Language</string>
     <string name="settings_section_ai">Artificial intelligence</string>
     <string name="settings_tags">Tags</string>
+    <string name="settings_tag_filter">Filter</string>
     <string name="settings_openai_api_key">OpenAI API Key</string>
     <string name="settings_api_key_hint">Key from platform.openai.com/api-keys</string>
     <string name="settings_api_not_added">Not added</string>
