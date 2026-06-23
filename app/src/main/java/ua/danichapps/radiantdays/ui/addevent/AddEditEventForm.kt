@@ -66,7 +66,7 @@ internal fun EventForm(
 
     val horizontalPadding = 4.dp
 
-    AlarmReminderDrawer(
+    NotesSettingsDrawer(
         modifier = modifier
             .fillMaxSize()
             .padding(vertical = horizontalPadding),

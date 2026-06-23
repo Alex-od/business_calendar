@@ -44,12 +44,12 @@ import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.ui.settings.AiApiLogScreen
 import ua.danichapps.radiantdays.ui.settings.DebugAiLogsSideMenuItem
 
-private val AlarmDrawerWidth = 280.dp
+private val NotesSettingsDrawerWidth = 280.dp
 
 /** Right-side drawer for alarm settings and note editor toggles. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AlarmReminderDrawer(
+fun NotesSettingsDrawer(
     alarmTimeMillis: Long?,
     notificationMinutesBefore: Int,
     dateFormat: SimpleDateFormat,
@@ -82,9 +82,9 @@ fun AlarmReminderDrawer(
             drawerContent = {
                 CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
                     ModalDrawerSheet(
-                        modifier = Modifier.width(AlarmDrawerWidth),
+                        modifier = Modifier.width(NotesSettingsDrawerWidth),
                     ) {
-                        AlarmSidePanel(
+                        NotesSettingsPanel(
                             alarmTimeMillis = alarmTimeMillis,
                             notificationMinutesBefore = notificationMinutesBefore,
                             dateFormat = dateFormat,
@@ -125,7 +125,7 @@ fun AlarmReminderDrawer(
 /** Drawer content: alarm controls and note editor visibility switches. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun AlarmSidePanel(
+private fun NotesSettingsPanel(
     alarmTimeMillis: Long?,
     notificationMinutesBefore: Int,
     dateFormat: SimpleDateFormat,
