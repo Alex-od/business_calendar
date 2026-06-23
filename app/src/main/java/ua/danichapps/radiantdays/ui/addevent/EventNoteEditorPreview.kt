@@ -1,5 +1,6 @@
 package ua.danichapps.radiantdays.ui.addevent
 
+import android.content.res.Configuration
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,6 +26,12 @@ private const val PREVIEW_DESCRIPTION = "Team sync\n\nDiscuss Q3 priorities."
 
 /** Preview: note editor without AI chat. */
 @Preview(showBackground = true, name = "Note editor", device = Devices.PIXEL_6)
+@Preview(
+    showBackground = true,
+    name = "Note editor (night)",
+    device = Devices.PIXEL_6,
+    uiMode = Configuration.UI_MODE_NIGHT_YES,
+)
 @Composable
 private fun EventNoteEditorPreview() {
     EventNoteEditorPreviewContent(

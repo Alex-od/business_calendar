@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -36,7 +35,6 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.domain.model.AiChatRole
-import ua.danichapps.radiantdays.domain.model.visibleContent
 import ua.danichapps.radiantdays.locale.AppLocaleStore
 import ua.danichapps.radiantdays.ui.common.NoteDisplayStyles
 import ua.danichapps.radiantdays.ui.common.NoteFormatToolbar
@@ -176,7 +174,6 @@ internal fun rememberEventNoteEditorState(
 internal fun NoteEditorToolbarRow(
     state: EventNoteEditorState,
     uiState: AddEditEventUiState,
-    callbacks: AddEditEventScreenCallbacks,
     noteDisplayStyles: NoteDisplayStyles,
     canUndo: Boolean = uiState.canUndoDescription,
 ) {
@@ -208,16 +205,10 @@ internal fun NoteEditorToolbarRow(
         IconButton(onClick = state.startVoiceInput) {
             Icon(Icons.Default.Mic, contentDescription = stringResource(R.string.event_voice_input))
         }
-        IconButton(
-            onClick = callbacks.onAiClick,
-            enabled = uiState.isAiKeySaved && state.descriptionValue.text.isNotBlank(),
-        ) {
-            Icon(Icons.Default.AutoAwesome, contentDescription = stringResource(R.string.ai_chat_assistant))
-        }
     }
 }
 
-/** Rich note field with toolbar, voice input, AI button, and optional chat list. */
+/** Rich note field with toolbar, voice input, and optional chat list. */
 @Composable
 internal fun EventNoteEditor(
     state: EventNoteEditorState,
@@ -225,6 +216,7 @@ internal fun EventNoteEditor(
     callbacks: AddEditEventScreenCallbacks,
     noteDisplayStyles: NoteDisplayStyles,
     modifier: Modifier = Modifier,
+    onMessageClick: (Int) -> Unit = {},
 ) {
     val bodyTextStyle = MaterialTheme.typography.bodyLarge
     val hasAiChatContent = uiState.aiChatMessages.isNotEmpty() || uiState.aiChatLoading
@@ -232,26 +224,11 @@ internal fun EventNoteEditor(
     val hasAiResponse = uiState.aiChatMessages.any { it.role == AiChatRole.ASSISTANT }
     val showNoteEditor = !isAiChatMessagesVisible || !hasAiResponse
     val oneLineHeight = with(LocalDensity.current) { bodyTextStyle.lineHeight.toDp() }
-    var editingMessageIndex by remember { mutableStateOf<Int?>(null) }
-
-    editingMessageIndex?.let { messageIndex ->
-        val message = uiState.aiChatMessages.getOrNull(messageIndex) ?: return@let
-        ChatMessageEditDialog(
-            messageIndex = messageIndex,
-            initialMarkdown = message.visibleContent(uiState.description),
-            messageRole = message.role,
-            uiState = uiState,
-            callbacks = callbacks,
-            noteDisplayStyles = noteDisplayStyles,
-            onDismiss = { editingMessageIndex = null },
-        )
-    }
 
     Column(modifier = modifier) {
         NoteEditorToolbarRow(
             state = state,
             uiState = uiState,
-            callbacks = callbacks,
             noteDisplayStyles = noteDisplayStyles,
         )
 
@@ -322,7 +299,7 @@ internal fun EventNoteEditor(
                         noteDescription = uiState.description,
                         hasAiResponse = hasAiResponse,
                         loading = uiState.aiChatLoading,
-                        onMessageClick = { editingMessageIndex = it },
+                        onMessageClick = onMessageClick,
                         onMessageDelete = callbacks.onAiChatMessageDelete,
                         onMessageCopied = callbacks.onAiChatMessageCopied,
                         modifier = Modifier.fillMaxSize(),

@@ -35,6 +35,7 @@ internal fun EventForm(
     uiState: AddEditEventUiState,
     callbacks: AddEditEventScreenCallbacks,
     modifier: Modifier = Modifier,
+    onMessageClick: (Int) -> Unit = {},
 ) {
     val context = LocalContext.current
     val localeStore: AppLocaleStore = koinInject()
@@ -88,6 +89,7 @@ internal fun EventForm(
             uiState = uiState,
             callbacks = callbacks,
             noteDisplayStyles = noteDisplayStyles,
+            onMessageClick = onMessageClick,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = horizontalPadding),
