@@ -51,6 +51,12 @@
     <string name="settings_snackbar_key_removed">Key removed</string>
     <string name="settings_api_check_failed_title">API key check failed</string>
     <string name="settings_ai_status_connected">Connected</string>
+    <string name="settings_show_ai_logs">Show logs</string>
+    <string name="settings_ai_logs_title">AI request log</string>
+    <string name="settings_ai_logs_empty">No requests yet</string>
+    <string name="settings_ai_logs_copy">Copy</string>
+    <string name="settings_ai_logs_clear">Clear</string>
+    <string name="settings_ai_logs_copied">Copied</string>
 
     <!-- Tags -->
     <string name="tag_settings_title">Tags</string>

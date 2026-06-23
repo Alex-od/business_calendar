@@ -3,6 +3,8 @@ package ua.danichapps.radiantdays.di
 import org.koin.androidx.viewmodel.dsl.viewModel
 import org.koin.dsl.module
 import ua.danichapps.radiantdays.ai.AiApiKeyStore
+import ua.danichapps.radiantdays.ai.AiApiRequestLogSink
+import ua.danichapps.radiantdays.ai.AiApiRequestLogStore
 import ua.danichapps.radiantdays.ai.OpenAiCompletionClientFactory
 import ua.danichapps.radiantdays.ai.RadiantAiCompletionClientProvider
 import ua.danichapps.radiantdays.ai.createAiOkHttpClient
@@ -111,15 +113,23 @@ val presentationModule = module {
     single { EventNotificationManager(get()) }
     single { AlarmScheduler(get(), get()) }
     single { createAiOkHttpClient() }
+    single<AiApiRequestLogSink> { AiApiRequestLogStore(get()) }
     single { AiApiKeyStore(get()) }
     single { AppLocaleStore(get()) }
     single { NoteEditorPreferencesStore(get()) }
     single { AppLocaleManager() }
     single { DomainErrorStrings(get()) }
     single { AppStrings(get()) }
-    single<AiCompletionClientFactory> { OpenAiCompletionClientFactory(okHttpClient = get()) }
+    single {
+        OpenAiCompletionClientFactory(okHttpClient = get(), logSink = get())
+    }
+    single<AiCompletionClientFactory> { get<OpenAiCompletionClientFactory>() }
     single<AiCompletionClientProvider> {
-        RadiantAiCompletionClientProvider(keyStore = get(), okHttpClient = get(), appStrings = get())
+        RadiantAiCompletionClientProvider(
+            keyStore = get(),
+            clientFactory = get(),
+            appStrings = get(),
+        )
     }
 
     single { DeviceIdProvider(get()) }

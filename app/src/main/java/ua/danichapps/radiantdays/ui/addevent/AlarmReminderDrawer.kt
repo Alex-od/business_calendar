@@ -2,9 +2,11 @@ package ua.danichapps.radiantdays.ui.addevent
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -39,6 +41,8 @@ import androidx.compose.ui.unit.dp
 import java.text.SimpleDateFormat
 import kotlinx.coroutines.launch
 import ua.danichapps.radiantdays.R
+import ua.danichapps.radiantdays.ui.settings.AiApiLogScreen
+import ua.danichapps.radiantdays.ui.settings.DebugAiLogsSideMenuItem
 
 private val AlarmDrawerWidth = 280.dp
 
@@ -64,6 +68,7 @@ fun AlarmReminderDrawer(
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    var showAiLogScreen by remember { mutableStateOf(false) }
 
     BackHandler(enabled = drawerState.isOpen) {
         scope.launch { drawerState.close() }
@@ -93,6 +98,12 @@ fun AlarmReminderDrawer(
                             showAiChat = showAiChat,
                             onShowFormatToolbarChange = onShowFormatToolbarChange,
                             onShowAiChatChange = onShowAiChatChange,
+                            onShowAiLogs = {
+                                scope.launch {
+                                    drawerState.close()
+                                    showAiLogScreen = true
+                                }
+                            },
                             modifier = Modifier.fillMaxHeight(),
                         )
                     }
@@ -100,7 +111,12 @@ fun AlarmReminderDrawer(
             },
         ) {
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
-                content()
+                Box(Modifier.fillMaxSize()) {
+                    content()
+                    if (showAiLogScreen) {
+                        AiApiLogScreen(onDismiss = { showAiLogScreen = false })
+                    }
+                }
             }
         }
     }
@@ -123,6 +139,7 @@ private fun AlarmSidePanel(
     showAiChat: Boolean,
     onShowFormatToolbarChange: (Boolean) -> Unit,
     onShowAiChatChange: (Boolean) -> Unit,
+    onShowAiLogs: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -184,6 +201,8 @@ private fun AlarmSidePanel(
             checked = showAiChat,
             onCheckedChange = onShowAiChatChange,
         )
+
+        DebugAiLogsSideMenuItem(onClick = onShowAiLogs)
     }
 }
 

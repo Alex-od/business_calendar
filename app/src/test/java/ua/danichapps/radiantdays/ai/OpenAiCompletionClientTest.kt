@@ -4,8 +4,10 @@ import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.SocketPolicy
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
@@ -22,18 +24,15 @@ import ua.danichapps.radiantdays.domain.model.MessageKey
 class OpenAiCompletionClientTest {
 
     private lateinit var server: MockWebServer
+    private lateinit var logSink: RecordingLogSink
     private lateinit var client: OpenAiCompletionClient
 
     @Before
     fun setUp() {
         server = MockWebServer()
         server.start()
-        client = OpenAiCompletionClient(
-            apiKey = "test-key",
-            model = "gpt-4o",
-            okHttpClient = OkHttpClient(),
-            apiUrl = server.url("/v1/chat/completions").toString(),
-        )
+        logSink = RecordingLogSink()
+        client = createClient(shouldLog = true)
     }
 
     @After
@@ -59,15 +58,55 @@ class OpenAiCompletionClientTest {
         val request = server.takeRequest()
         assertEquals("Bearer test-key", request.getHeader("Authorization"))
         assertTrue(request.body.readUtf8().contains("\"model\":\"gpt-4o\""))
+
+        val log = logSink.savedLog.orEmpty()
+        assertTrue(log.contains("=== REQUEST ==="))
+        assertTrue(log.contains("=== RESPONSE ==="))
+    }
+
+    @Test
+    fun `does not save log when shouldLog is false`() = runTest {
+        client = createClient(shouldLog = false)
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setBody(chatCompletionJson("Hi")),
+        )
+
+        client.complete("Hi")
+
+        assertNull(logSink.savedLog)
     }
 
     @Test
     fun `returns Error with AI_INVALID_API_KEY when response is 401`() = runTest {
-        server.enqueue(MockResponse().setResponseCode(401))
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(401)
+                .setBody("""{"error":{"message":"Invalid API key"}}"""),
+        )
 
         val result = client.complete("Hi")
 
         assertError(result, MessageKey.AI_INVALID_API_KEY)
+        val log = logSink.savedLog.orEmpty()
+        assertTrue(log.contains("HTTP 401"))
+        assertTrue(log.contains("Invalid API key"))
+    }
+
+    @Test
+    fun `saves network error log when connection fails`() = runTest {
+        server.enqueue(
+            MockResponse()
+                .setSocketPolicy(SocketPolicy.DISCONNECT_AT_START),
+        )
+
+        val result = client.complete("Hi")
+
+        assertTrue(result is DomainResult.Error)
+        val log = logSink.savedLog.orEmpty()
+        assertTrue(log.contains("=== ERROR ==="))
+        assertTrue(log.contains("=== REQUEST ==="))
     }
 
     @Test
@@ -138,6 +177,16 @@ class OpenAiCompletionClientTest {
 
         assertError(result, MessageKey.AI_PARSE_ERROR)
     }
+
+    private fun createClient(shouldLog: Boolean): OpenAiCompletionClient =
+        OpenAiCompletionClient(
+            apiKey = "test-key",
+            model = "gpt-4o",
+            okHttpClient = OkHttpClient(),
+            logSink = logSink,
+            shouldLog = shouldLog,
+            apiUrl = server.url("/v1/chat/completions").toString(),
+        )
 
     private fun assertError(result: DomainResult<String>, expectedKey: MessageKey) {
         assertTrue("Expected Error but got $result", result is DomainResult.Error)

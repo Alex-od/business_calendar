@@ -51,6 +51,12 @@
     <string name="settings_snackbar_key_removed">Ключ удалён</string>
     <string name="settings_api_check_failed_title">Проверка API-ключа</string>
     <string name="settings_ai_status_connected">Подключён</string>
+    <string name="settings_show_ai_logs">Показать логи</string>
+    <string name="settings_ai_logs_title">Лог AI-запроса</string>
+    <string name="settings_ai_logs_empty">Запросов пока нет</string>
+    <string name="settings_ai_logs_copy">Копировать</string>
+    <string name="settings_ai_logs_clear">Очистить</string>
+    <string name="settings_ai_logs_copied">Скопировано</string>
 
     <!-- Tags -->
     <string name="tag_settings_title">Теги</string>
