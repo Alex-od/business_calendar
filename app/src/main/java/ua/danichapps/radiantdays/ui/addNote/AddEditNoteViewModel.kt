@@ -7,15 +7,15 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import ua.danichapps.radiantdays.domain.model.Tag
 import ua.danichapps.radiantdays.domain.model.normalizeFirstUserMessage
-import ua.danichapps.radiantdays.domain.model.CalendarEvent
 import ua.danichapps.radiantdays.domain.model.MessageKey
-import ua.danichapps.radiantdays.domain.model.onError
-import ua.danichapps.radiantdays.domain.model.onSuccess
 import ua.danichapps.radiantdays.domain.usecase.AddEventUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetEventByIdUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetTagsUseCase
@@ -25,7 +25,6 @@ import ua.danichapps.radiantdays.domain.usecase.ContinueAiChatUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetVisibleAiActionsUseCase
 import ua.danichapps.radiantdays.domain.usecase.RunAiActionUseCase
 import ua.danichapps.radiantdays.locale.AppLocaleStore
-import ua.danichapps.radiantdays.locale.DomainErrorStrings
 import ua.danichapps.radiantdays.notification.AlarmScheduler
 import ua.danichapps.radiantdays.widget.CalendarWidgetUpdater
 import java.util.Calendar
@@ -43,7 +42,6 @@ class AddEditNoteViewModel(
     private val getEventByIdUseCase: GetEventByIdUseCase,
     private val alarmScheduler: AlarmScheduler,
     private val widgetUpdater: CalendarWidgetUpdater,
-    private val errorStrings: DomainErrorStrings,
     localeStore: AppLocaleStore,
     apiKeyStore: AiApiKeyStore,
     private val noteEditorPreferencesStore: NoteEditorPreferencesStore,
@@ -56,12 +54,32 @@ class AddEditNoteViewModel(
     val events: Flow<AddEditNoteUiEvent> = _events.receiveAsFlow()
 
     private val descriptionUndo = NoteDescriptionUndoController(viewModelScope)
+    private val saveCoordinator = NoteSaveCoordinator(
+        addEventUseCase = addEventUseCase,
+        updateEventUseCase = updateEventUseCase,
+        alarmScheduler = alarmScheduler,
+        widgetUpdater = widgetUpdater,
+        updateState = { transform -> _uiState.update(transform) },
+        onSaveError = { key, args, cause ->
+            _events.send(AddEditNoteUiEvent.ShowError(key, args, cause))
+        },
+    )
     private val autoSave = NoteAutoSaveController(
         scope = viewModelScope,
         debounceMs = AUTO_SAVE_DEBOUNCE_MS,
         readState = { _uiState.value },
-        save = ::performSave,
+        save = saveCoordinator::save,
     )
+    private val tagsState: StateFlow<List<Tag>> = getTagsUseCase()
+        .catch {
+            _events.send(AddEditNoteUiEvent.ShowError(MessageKey.LOAD_TAGS_FAILED))
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
+
     private val ai = NoteAiOrchestrator(
         scope = viewModelScope,
         apiKeyStore = apiKeyStore,
@@ -69,10 +87,11 @@ class AddEditNoteViewModel(
         getVisibleAiActionsUseCase = getVisibleAiActionsUseCase,
         runAiActionUseCase = runAiActionUseCase,
         continueAiChatUseCase = continueAiChatUseCase,
-        errorStrings = errorStrings,
         readState = { _uiState.value },
         updateState = { transform -> _uiState.update(transform) },
-        onShowError = { message -> _events.send(AddEditNoteUiEvent.ShowError(message)) },
+        onShowError = { key, args, cause ->
+            _events.send(AddEditNoteUiEvent.ShowError(key, args, cause))
+        },
         onScheduleAutoSave = autoSave::schedule,
         onSyncDescriptionFromFirstChatMessage = ::applyDiscreteDescriptionChange,
     )
@@ -81,7 +100,7 @@ class AddEditNoteViewModel(
         ai.refreshKeyStatus()
         refreshNoteEditorPreferences()
         observeTags()
-        ai.observeVisibleActions()
+        observeVisibleActions()
     }
 
     /** Reloads format toolbar and AI chat visibility from preferences. */
@@ -159,7 +178,7 @@ class AddEditNoteViewModel(
                 }
             } else {
                 _uiState.update { it.copy(isLoading = false) }
-                _events.send(AddEditNoteUiEvent.ShowError(errorStrings.resolve(MessageKey.NOTE_NOT_FOUND)))
+                _events.send(AddEditNoteUiEvent.ShowError(MessageKey.NOTE_NOT_FOUND))
             }
         }
     }
@@ -193,12 +212,6 @@ class AddEditNoteViewModel(
     fun onDescriptionUndo() {
         val previous = descriptionUndo.undo(::updateCanUndoDescription) ?: return
         setDescription(previous, scheduleSave = false)
-    }
-
-    /** Updates event start time. */
-    fun onStartTimeChange(millis: Long) {
-        _uiState.update { it.copy(startTimeMillis = millis) }
-        autoSave.schedule()
     }
 
     /** Sets default alarm one hour ahead if none exists. */
@@ -286,87 +299,25 @@ class AddEditNoteViewModel(
         }
     }
 
-    /** Creates or updates the event, then refreshes alarm and widget. */
-    private suspend fun performSave(state: AddEditNoteUiState) {
-        if (state.title.isBlank() && state.description.isBlank() && state.aiChatMessages.isEmpty()) return
-        val event = buildNote(state)
-        if (state.editingNoteId != null) {
-            updateEventUseCase(event)
-                .onSuccess {
-                    val now = System.currentTimeMillis()
-                    _uiState.update { current ->
-                        current.copy(
-                            createdAtMillis = current.createdAtMillis ?: now,
-                            updatedAtMillis = now,
-                        )
-                    }
-                    if (event.alarmTimeMillis == null || event.isCompleted) {
-                        alarmScheduler.cancel(event.id)
-                    } else {
-                        alarmScheduler.schedule(event)
-                    }
-                    widgetUpdater.refresh()
-                }
-                .onError { exception, key, args ->
-                    _events.send(AddEditNoteUiEvent.ShowError(errorStrings.resolve(key, args, exception)))
-                }
-        } else {
-            addEventUseCase(event)
-                .onSuccess { newId ->
-                    val now = System.currentTimeMillis()
-                    val saved = event.copy(id = newId)
-                    _uiState.update {
-                        it.copy(
-                            editingNoteId = newId,
-                            createdAtMillis = now,
-                            updatedAtMillis = now,
-                        )
-                    }
-                    if (saved.alarmTimeMillis != null && !saved.isCompleted) {
-                        alarmScheduler.schedule(saved)
-                    }
-                    widgetUpdater.refresh()
-                }
-                .onError { exception, key, args ->
-                    _events.send(AddEditNoteUiEvent.ShowError(errorStrings.resolve(key, args, exception)))
-                }
-        }
-    }
-
-    /** Maps uiState to a [CalendarEvent] for persistence. */
-    private fun buildNote(state: AddEditNoteUiState) = CalendarEvent(
-        id = state.editingNoteId ?: 0L,
-        title = state.title.trim(),
-        description = state.description.trim(),
-        startTimeMillis = state.startTimeMillis,
-        endTimeMillis = state.startTimeMillis + 60 * 60 * 1_000L,
-        isAllDay = false,
-        notificationMinutesBefore = state.notificationMinutesBefore,
-        alarmTimeMillis = state.alarmTimeMillis,
-        isCompleted = state.isCompleted,
-        tagGuids = state.selectedTagGuids,
-        aiChatMessages = state.aiChatMessages,
-    )
-
     /** Subscribes to tag list and prunes stale selected guids. */
     private fun observeTags() {
         viewModelScope.launch {
-            getTagsUseCase()
-                .catch {
-                    _events.send(
-                        AddEditNoteUiEvent.ShowError(
-                            errorStrings.resolve(MessageKey.LOAD_TAGS_FAILED),
-                        ),
-                    )
+            tagsState.collect { tags ->
+                _uiState.update { state ->
+                    val validGuids = state.selectedTagGuids.filter { guid ->
+                        tags.any { tag -> tag.guid == guid }
+                    }.toSet()
+                    state.copy(tags = tags, selectedTagGuids = validGuids)
                 }
-                .collect { tags ->
-                    _uiState.update { state ->
-                        val validGuids = state.selectedTagGuids.filter { guid ->
-                            tags.any { tag -> tag.guid == guid }
-                        }.toSet()
-                        state.copy(tags = tags, selectedTagGuids = validGuids)
-                    }
-                }
+            }
+        }
+    }
+
+    private fun observeVisibleActions() {
+        viewModelScope.launch {
+            ai.visibleActions.collect { actions ->
+                _uiState.update { it.copy(visibleAiActions = actions) }
+            }
         }
     }
 }

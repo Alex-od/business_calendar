@@ -1,9 +1,13 @@
 package ua.danichapps.radiantdays.ui.addNote
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import ua.danichapps.radiantdays.ai.AiApiKeyStore
+import ua.danichapps.radiantdays.domain.model.AiAction
 import ua.danichapps.radiantdays.domain.model.AiChatMessage
 import ua.danichapps.radiantdays.domain.model.AiChatRole
 import ua.danichapps.radiantdays.domain.model.AiNoteContext
@@ -14,7 +18,6 @@ import ua.danichapps.radiantdays.domain.usecase.ContinueAiChatUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetVisibleAiActionsUseCase
 import ua.danichapps.radiantdays.domain.usecase.RunAiActionUseCase
 import ua.danichapps.radiantdays.locale.AppLocaleStore
-import ua.danichapps.radiantdays.locale.DomainErrorStrings
 
 /** AI sheet, chat history, and completion orchestration for the note editor screen. */
 internal class NoteAiOrchestrator(
@@ -24,27 +27,24 @@ internal class NoteAiOrchestrator(
     private val getVisibleAiActionsUseCase: GetVisibleAiActionsUseCase,
     private val runAiActionUseCase: RunAiActionUseCase,
     private val continueAiChatUseCase: ContinueAiChatUseCase,
-    private val errorStrings: DomainErrorStrings,
     private val readState: () -> AddEditNoteUiState,
     private val updateState: ((AddEditNoteUiState) -> AddEditNoteUiState) -> Unit,
-    private val onShowError: suspend (String) -> Unit,
+    private val onShowError: suspend (MessageKey, List<String>, Throwable?) -> Unit,
     private val onScheduleAutoSave: () -> Unit,
     private val onSyncDescriptionFromFirstChatMessage: (String) -> Unit,
 ) {
+    val visibleActions: StateFlow<List<AiAction>> = getVisibleAiActionsUseCase()
+        .catch {
+            onShowError(MessageKey.LOAD_AI_ACTIONS_FAILED, emptyList(), null)
+        }
+        .stateIn(
+            scope = scope,
+            started = SharingStarted.WhileSubscribed(5_000),
+            initialValue = emptyList(),
+        )
+
     fun refreshKeyStatus() {
         updateState { it.copy(isAiKeySaved = apiKeyStore.hasKey()) }
-    }
-
-    fun observeVisibleActions() {
-        scope.launch {
-            getVisibleAiActionsUseCase()
-                .catch {
-                    onShowError(errorStrings.resolve(MessageKey.LOAD_AI_ACTIONS_FAILED))
-                }
-                .collect { actions ->
-                    updateState { it.copy(visibleAiActions = actions) }
-                }
-        }
     }
 
     fun onAiButtonClick() {
@@ -80,7 +80,7 @@ internal class NoteAiOrchestrator(
                 }
                 .onError { exception, key, args ->
                     updateState { it.copy(aiLoading = false) }
-                    onShowError(errorStrings.resolve(key, args, exception))
+                    onShowError(key, args, exception)
                 }
         }
     }
@@ -164,7 +164,7 @@ internal class NoteAiOrchestrator(
                             aiChatMessages = state.aiChatMessages.dropLast(1),
                         )
                     }
-                    onShowError(errorStrings.resolve(key, args, exception))
+                    onShowError(key, args, exception)
                 }
         }
     }

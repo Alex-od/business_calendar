@@ -11,6 +11,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import org.koin.compose.koinInject
+import ua.danichapps.radiantdays.locale.DomainErrorStrings
 import androidx.lifecycle.compose.LifecycleResumeEffect
 
 /** Side effects: load event, collect one-shot events, handle back and new tags. */
@@ -19,26 +21,30 @@ internal fun AddEditNoteScreenEffects(
     editingNoteId: Long?,
     initialDayMillis: Long,
     createdTagGuid: String?,
-    viewModel: AddEditNoteViewModel,
+    actions: AddEditNoteViewModelActions,
     onNavigateBack: () -> Unit,
     onCreatedTagGuidConsumed: () -> Unit,
     snackbarHostState: SnackbarHostState,
 ) {
+    val errorStrings: DomainErrorStrings = koinInject()
+
     LifecycleResumeEffect(Unit) {
-        viewModel.refreshAiKeyStatus()
+        actions.refreshAiKeyStatus()
         onPauseOrDispose { }
     }
 
     LaunchedEffect(editingNoteId) {
-        if (editingNoteId != null) viewModel.loadNote(editingNoteId)
-        else viewModel.setInitialDay(initialDayMillis)
+        if (editingNoteId != null) actions.loadNote(editingNoteId)
+        else actions.setInitialDay(initialDayMillis)
     }
 
     LaunchedEffect(Unit) {
-        viewModel.events.collect { event ->
+        actions.events.collect { event ->
             when (event) {
                 is AddEditNoteUiEvent.NavigateBack -> onNavigateBack()
-                is AddEditNoteUiEvent.ShowError -> snackbarHostState.showSnackbar(event.message)
+                is AddEditNoteUiEvent.ShowError -> snackbarHostState.showSnackbar(
+                    errorStrings.resolve(event.key, event.args, event.cause),
+                )
                 is AddEditNoteUiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
@@ -46,11 +52,11 @@ internal fun AddEditNoteScreenEffects(
 
     LaunchedEffect(createdTagGuid) {
         val tagGuid = createdTagGuid ?: return@LaunchedEffect
-        viewModel.onTagAddedFromSettings(tagGuid)
+        actions.onTagAddedFromSettings(tagGuid)
         onCreatedTagGuidConsumed()
     }
 
-    BackHandler(onBack = viewModel::onBackClick)
+    BackHandler(onBack = actions.onBackClick)
 }
 
 /** Returns a callback that requests POST_NOTIFICATIONS on API 33+ before adding an alarm. */

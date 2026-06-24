@@ -54,7 +54,6 @@ val presentationModule = module {
             getEventByIdUseCase = get(),
             alarmScheduler = get(),
             widgetUpdater = get(),
-            errorStrings = get(),
             localeStore = get(),
             apiKeyStore = get(),
             noteEditorPreferencesStore = get(),

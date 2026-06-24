@@ -8,6 +8,7 @@ import androidx.compose.ui.tooling.preview.Devices
 import androidx.compose.ui.tooling.preview.Preview
 import org.koin.android.ext.koin.androidContext
 import org.koin.compose.KoinApplication
+import org.koin.compose.koinInject
 import org.koin.dsl.module
 import ua.danichapps.radiantdays.domain.model.EventColor
 import ua.danichapps.radiantdays.domain.model.Tag
@@ -27,6 +28,8 @@ private fun AddEditNoteScreenPreview() {
             },
         )
     }) {
+        val localeStore: AppLocaleStore = koinInject()
+        val locale = remember(context) { localeStore.resolveLocale(context) }
         RadiantDaysTheme(dynamicColor = false) {
             AddEditNoteScreenContent(
                 uiState = AddEditNoteUiState(
@@ -39,6 +42,7 @@ private fun AddEditNoteScreenPreview() {
                 ),
                 callbacks = AddEditNoteScreenCallbacks(),
                 snackbarHostState = remember { SnackbarHostState() },
+                locale = locale,
             )
         }
     }
@@ -57,11 +61,14 @@ private fun AddEditNoteScreenLoadingPreview() {
             },
         )
     }) {
+        val localeStore: AppLocaleStore = koinInject()
+        val locale = remember(context) { localeStore.resolveLocale(context) }
         RadiantDaysTheme(dynamicColor = false) {
             AddEditNoteScreenContent(
                 uiState = AddEditNoteUiState(isLoading = true),
                 callbacks = AddEditNoteScreenCallbacks(),
                 snackbarHostState = remember { SnackbarHostState() },
+                locale = locale,
             )
         }
     }

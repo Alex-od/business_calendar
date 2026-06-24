@@ -168,11 +168,10 @@ internal fun rememberNoteEditorState(
 @Composable
 internal fun NoteEditorToolbarRow(
     state: NoteEditorState,
-    uiState: AddEditNoteUiState,
+    showFormatToolbar: Boolean,
     noteDisplayStyles: NoteDisplayStyles,
-    canUndo: Boolean = uiState.canUndoDescription,
+    canUndo: Boolean = false,
 ) {
-    val showFormatToolbar = uiState.showFormatToolbar
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -223,8 +222,9 @@ internal fun NoteEditor(
     Column(modifier = modifier) {
         NoteEditorToolbarRow(
             state = state,
-            uiState = uiState,
+            showFormatToolbar = uiState.showFormatToolbar,
             noteDisplayStyles = noteDisplayStyles,
+            canUndo = uiState.canUndoDescription,
         )
 
         Column(

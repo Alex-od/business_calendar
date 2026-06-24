@@ -1,5 +1,10 @@
 package ua.danichapps.radiantdays.ui.addNote
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -21,11 +26,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import org.koin.compose.koinInject
 import ua.danichapps.radiantdays.domain.model.visibleContent
-import ua.danichapps.radiantdays.locale.AppLocaleStore
 import ua.danichapps.radiantdays.ui.common.KeyboardInsetsPolicy
 import ua.danichapps.radiantdays.ui.common.NoteDisplayStyles
 import java.util.Locale
@@ -37,10 +39,8 @@ internal fun AddEditNoteScreenContent(
     uiState: AddEditNoteUiState,
     callbacks: AddEditNoteScreenCallbacks,
     snackbarHostState: SnackbarHostState,
+    locale: Locale,
 ) {
-    val context = LocalContext.current
-    val localeStore: AppLocaleStore = koinInject()
-    val locale = remember(context) { localeStore.resolveLocale(context) }
     var editingMessageIndex by remember { mutableIntStateOf(-1) }
 
     Box(Modifier.fillMaxSize()) {
@@ -61,28 +61,33 @@ internal fun AddEditNoteScreenContent(
             }
         }
 
-        if (editingMessageIndex >= 0) {
-            val message = uiState.aiChatMessages.getOrNull(editingMessageIndex)
-            if (message != null) {
-                val typography = MaterialTheme.typography
-                val noteDisplayStyles = remember(typography) {
-                    NoteDisplayStyles(
-                        smallSize = typography.labelSmall.fontSize,
-                        normalSize = typography.bodyLarge.fontSize,
-                        largeSize = typography.headlineSmall.fontSize,
-                    )
-                }
-                ChatMessageEditScreen(
-                    messageIndex = editingMessageIndex,
-                    initialMarkdown = message.visibleContent(uiState.description),
-                    messageRole = message.role,
-                    uiState = uiState,
-                    callbacks = callbacks,
-                    noteDisplayStyles = noteDisplayStyles,
-                    locale = locale,
-                    onDismiss = { editingMessageIndex = -1 },
+        val editingMessage = uiState.aiChatMessages.getOrNull(editingMessageIndex)
+        AnimatedVisibility(
+            visible = editingMessage != null,
+            enter = fadeIn() + slideInVertically { fullHeight -> fullHeight / 8 },
+            exit = fadeOut() + slideOutVertically { fullHeight -> fullHeight / 8 },
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            val message = editingMessage ?: return@AnimatedVisibility
+            val typography = MaterialTheme.typography
+            val noteDisplayStyles = remember(typography) {
+                NoteDisplayStyles(
+                    smallSize = typography.labelSmall.fontSize,
+                    normalSize = typography.bodyLarge.fontSize,
+                    largeSize = typography.headlineSmall.fontSize,
                 )
             }
+            ChatMessageEditScreen(
+                messageIndex = editingMessageIndex,
+                initialMarkdown = message.visibleContent(uiState.description),
+                messageRole = message.role,
+                editingNoteId = uiState.editingNoteId,
+                showFormatToolbar = uiState.showFormatToolbar,
+                callbacks = callbacks,
+                noteDisplayStyles = noteDisplayStyles,
+                locale = locale,
+                onDismiss = { editingMessageIndex = -1 },
+            )
         }
     }
 

@@ -34,7 +34,8 @@ internal fun ChatMessageEditScreen(
     messageIndex: Int,
     initialMarkdown: String,
     messageRole: AiChatRole,
-    uiState: AddEditNoteUiState,
+    editingNoteId: Long?,
+    showFormatToolbar: Boolean,
     callbacks: AddEditNoteScreenCallbacks,
     noteDisplayStyles: NoteDisplayStyles,
     locale: Locale,
@@ -42,7 +43,7 @@ internal fun ChatMessageEditScreen(
 ) {
     val editorState = rememberNoteEditorState(
         description = initialMarkdown,
-        editingNoteId = uiState.editingNoteId,
+        editingNoteId = editingNoteId,
         locale = locale,
         noteDisplayStyles = noteDisplayStyles,
         onDescriptionChange = { content ->
@@ -88,7 +89,7 @@ internal fun ChatMessageEditScreen(
             ) {
                 NoteEditorToolbarRow(
                     state = editorState,
-                    uiState = uiState,
+                    showFormatToolbar = showFormatToolbar,
                     noteDisplayStyles = noteDisplayStyles,
                     canUndo = false,
                 )
