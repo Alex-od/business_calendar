@@ -1,4 +1,4 @@
-package ua.danichapps.radiantdays.ui.addevent
+package ua.danichapps.radiantdays.ui.addNote
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.PaddingValues

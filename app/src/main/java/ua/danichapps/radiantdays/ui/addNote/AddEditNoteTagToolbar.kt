@@ -1,4 +1,4 @@
-package ua.danichapps.radiantdays.ui.addevent
+package ua.danichapps.radiantdays.ui.addNote
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -33,8 +33,8 @@ import ua.danichapps.radiantdays.ui.common.TagOverflowRow
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun TagToolbar(
-    uiState: AddEditEventUiState,
-    callbacks: AddEditEventScreenCallbacks,
+    uiState: AddEditNoteUiState,
+    callbacks: AddEditNoteScreenCallbacks,
 ) {
     Surface(
         color = TopAppBarDefaults.topAppBarColors().containerColor,

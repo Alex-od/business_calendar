@@ -1,4 +1,4 @@
-package ua.danichapps.radiantdays.ui.addevent
+package ua.danichapps.radiantdays.ui.addNote
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -31,9 +31,9 @@ import java.util.Calendar
 /** Note editor inside the alarm drawer; hosts date/time pickers for the alarm. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun EventForm(
-    uiState: AddEditEventUiState,
-    callbacks: AddEditEventScreenCallbacks,
+internal fun NoteForm(
+    uiState: AddEditNoteUiState,
+    callbacks: AddEditNoteScreenCallbacks,
     modifier: Modifier = Modifier,
     onMessageClick: (Int) -> Unit = {},
 ) {
@@ -54,9 +54,9 @@ internal fun EventForm(
     var showAlarmDatePicker by remember { mutableStateOf(false) }
     var showAlarmTimePicker by remember { mutableStateOf(false) }
 
-    val noteEditorState = rememberEventNoteEditorState(
+    val noteEditorState = rememberNoteEditorState(
         description = uiState.description,
-        editingEventId = uiState.editingEventId,
+        editingNoteId = uiState.editingNoteId,
         noteDisplayStyles = noteDisplayStyles,
         onDescriptionChange = callbacks.onDescriptionChange,
         onDescriptionChangeFromVoice = callbacks.onDescriptionChangeFromVoice,
@@ -84,7 +84,7 @@ internal fun EventForm(
         onShowFormatToolbarChange = callbacks.onShowFormatToolbarChange,
         onShowAiChatChange = callbacks.onShowAiChatChange,
     ) {
-        EventNoteEditor(
+        NoteEditor(
             state = noteEditorState,
             uiState = uiState,
             callbacks = callbacks,

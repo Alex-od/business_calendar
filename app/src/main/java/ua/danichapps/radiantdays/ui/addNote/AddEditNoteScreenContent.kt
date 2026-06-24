@@ -1,4 +1,4 @@
-package ua.danichapps.radiantdays.ui.addevent
+package ua.danichapps.radiantdays.ui.addNote
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,9 +29,9 @@ import ua.danichapps.radiantdays.ui.common.NoteDisplayStyles
 /** Root scaffold: toolbar, form or loading state, AI chat bar, and actions sheet. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun AddEditEventScreenContent(
-    uiState: AddEditEventUiState,
-    callbacks: AddEditEventScreenCallbacks,
+internal fun AddEditNoteScreenContent(
+    uiState: AddEditNoteUiState,
+    callbacks: AddEditNoteScreenCallbacks,
     snackbarHostState: SnackbarHostState,
 ) {
     var editingMessageIndex by remember { mutableIntStateOf(-1) }
@@ -40,11 +40,11 @@ internal fun AddEditEventScreenContent(
         Scaffold(
             topBar = { TagToolbar(uiState = uiState, callbacks = callbacks) },
             snackbarHost = { SnackbarHost(snackbarHostState) },
-            bottomBar = { AddEditEventAiChatBottomBar(uiState = uiState, callbacks = callbacks) },
+            bottomBar = { AddEditNoteAiChatBottomBar(uiState = uiState, callbacks = callbacks) },
         ) { padding ->
             when {
-                uiState.isLoading -> AddEditEventLoadingContent(padding)
-                else -> AddEditEventBody(
+                uiState.isLoading -> AddEditNoteLoadingContent(padding)
+                else -> AddEditNoteBody(
                     uiState = uiState,
                     callbacks = callbacks,
                     padding = padding,
@@ -91,7 +91,7 @@ internal fun AddEditEventScreenContent(
 
 /** Centered spinner shown while an existing event is loading. */
 @Composable
-private fun AddEditEventLoadingContent(padding: PaddingValues) {
+private fun AddEditNoteLoadingContent(padding: PaddingValues) {
     Column(
         Modifier.fillMaxSize().padding(padding),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -103,14 +103,14 @@ private fun AddEditEventLoadingContent(padding: PaddingValues) {
 
 /** Main form area with optional AI-action loading overlay. */
 @Composable
-private fun AddEditEventBody(
-    uiState: AddEditEventUiState,
-    callbacks: AddEditEventScreenCallbacks,
+private fun AddEditNoteBody(
+    uiState: AddEditNoteUiState,
+    callbacks: AddEditNoteScreenCallbacks,
     padding: PaddingValues,
     onMessageClick: (Int) -> Unit,
 ) {
     Box(Modifier.fillMaxSize().padding(padding)) {
-        EventForm(
+        NoteForm(
             uiState = uiState,
             callbacks = callbacks,
             onMessageClick = onMessageClick,
@@ -130,9 +130,9 @@ private fun AddEditEventBody(
 
 /** Bottom chat input bar; hidden when AI chat is disabled. */
 @Composable
-private fun AddEditEventAiChatBottomBar(
-    uiState: AddEditEventUiState,
-    callbacks: AddEditEventScreenCallbacks,
+private fun AddEditNoteAiChatBottomBar(
+    uiState: AddEditNoteUiState,
+    callbacks: AddEditNoteScreenCallbacks,
 ) {
     if (!uiState.showAiChat) return
 

@@ -1,4 +1,4 @@
-package ua.danichapps.radiantdays.ui.addevent
+package ua.danichapps.radiantdays.ui.addNote
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -40,7 +40,7 @@ private const val AUTO_SAVE_DEBOUNCE_MS = 500L
 private const val DESCRIPTION_UNDO_LIMIT = 10
 private const val DESCRIPTION_UNDO_GROUP_MS = 1_000L
 
-class AddEditEventViewModel(
+class AddEditNoteViewModel(
     private val addEventUseCase: AddEventUseCase,
     private val updateEventUseCase: UpdateEventUseCase,
     private val getTagsUseCase: GetTagsUseCase,
@@ -56,11 +56,11 @@ class AddEditEventViewModel(
     private val noteEditorPreferencesStore: NoteEditorPreferencesStore,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AddEditEventUiState())
-    val uiState: StateFlow<AddEditEventUiState> = _uiState.asStateFlow()
+    private val _uiState = MutableStateFlow(AddEditNoteUiState())
+    val uiState: StateFlow<AddEditNoteUiState> = _uiState.asStateFlow()
 
-    private val _events = Channel<AddEditEventUiEvent>(Channel.BUFFERED)
-    val events: Flow<AddEditEventUiEvent> = _events.receiveAsFlow()
+    private val _events = Channel<AddEditNoteUiEvent>(Channel.BUFFERED)
+    val events: Flow<AddEditNoteUiEvent> = _events.receiveAsFlow()
 
     private var autoSaveJob: Job? = null
 
@@ -150,7 +150,7 @@ class AddEditEventViewModel(
                 }
                 .onError { exception, key, args ->
                     _uiState.update { it.copy(aiLoading = false) }
-                    _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args, exception)))
+                    _events.send(AddEditNoteUiEvent.ShowError(errorStrings.resolve(key, args, exception)))
                 }
         }
     }
@@ -233,13 +233,13 @@ class AddEditEventViewModel(
                             aiChatMessages = state.aiChatMessages.dropLast(1),
                         )
                     }
-                    _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args, exception)))
+                    _events.send(AddEditNoteUiEvent.ShowError(errorStrings.resolve(key, args, exception)))
                 }
         }
     }
 
     /** Loads an existing event by id into uiState. */
-    fun loadEvent(id: Long) {
+    fun loadNote(id: Long) {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true) }
             val event = repository.getEventById(id)
@@ -249,7 +249,7 @@ class AddEditEventViewModel(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        editingEventId = event.id,
+                        editingNoteId = event.id,
                         title = event.title,
                         description = event.description,
                         startTimeMillis = event.startTimeMillis,
@@ -267,7 +267,7 @@ class AddEditEventViewModel(
                 }
             } else {
                 _uiState.update { it.copy(isLoading = false) }
-                _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(MessageKey.NOTE_NOT_FOUND)))
+                _events.send(AddEditNoteUiEvent.ShowError(errorStrings.resolve(MessageKey.NOTE_NOT_FOUND)))
             }
         }
     }
@@ -397,7 +397,7 @@ class AddEditEventViewModel(
         updateCanUndoDescription()
     }
 
-    /** Updates [AddEditEventUiState.canUndoDescription] from stack and group state. */
+    /** Updates [AddEditNoteUiState.canUndoDescription] from stack and group state. */
     private fun updateCanUndoDescription() {
         val canUndo = descriptionUndoStack.isNotEmpty() || descriptionUndoGroupBase != null
         if (_uiState.value.canUndoDescription != canUndo) {
@@ -473,7 +473,7 @@ class AddEditEventViewModel(
         autoSaveJob?.cancel()
         viewModelScope.launch {
             performSave(_uiState.value)
-            _events.send(AddEditEventUiEvent.NavigateBack)
+            _events.send(AddEditNoteUiEvent.NavigateBack)
         }
     }
 
@@ -487,10 +487,10 @@ class AddEditEventViewModel(
     }
 
     /** Creates or updates the event, then refreshes alarm and widget. */
-    private suspend fun performSave(state: AddEditEventUiState) {
+    private suspend fun performSave(state: AddEditNoteUiState) {
         if (state.title.isBlank() && state.description.isBlank() && state.aiChatMessages.isEmpty()) return
-        val event = buildEvent(state)
-        if (state.editingEventId != null) {
+        val event = buildNote(state)
+        if (state.editingNoteId != null) {
             updateEventUseCase(event)
                 .onSuccess {
                     val now = System.currentTimeMillis()
@@ -508,7 +508,7 @@ class AddEditEventViewModel(
                     widgetUpdater.refresh()
                 }
                 .onError { exception, key, args ->
-                    _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args, exception)))
+                    _events.send(AddEditNoteUiEvent.ShowError(errorStrings.resolve(key, args, exception)))
                 }
         } else {
             addEventUseCase(event)
@@ -517,7 +517,7 @@ class AddEditEventViewModel(
                     val saved = event.copy(id = newId)
                     _uiState.update {
                         it.copy(
-                            editingEventId = newId,
+                            editingNoteId = newId,
                             createdAtMillis = now,
                             updatedAtMillis = now,
                         )
@@ -528,14 +528,14 @@ class AddEditEventViewModel(
                     widgetUpdater.refresh()
                 }
                 .onError { exception, key, args ->
-                    _events.send(AddEditEventUiEvent.ShowError(errorStrings.resolve(key, args, exception)))
+                    _events.send(AddEditNoteUiEvent.ShowError(errorStrings.resolve(key, args, exception)))
                 }
         }
     }
 
     /** Maps uiState to a [CalendarEvent] for persistence. */
-    private fun buildEvent(state: AddEditEventUiState) = CalendarEvent(
-        id = state.editingEventId ?: 0L,
+    private fun buildNote(state: AddEditNoteUiState) = CalendarEvent(
+        id = state.editingNoteId ?: 0L,
         title = state.title.trim(),
         description = state.description.trim(),
         startTimeMillis = state.startTimeMillis,
@@ -554,7 +554,7 @@ class AddEditEventViewModel(
             getTagsUseCase()
                 .catch {
                     _events.send(
-                        AddEditEventUiEvent.ShowError(
+                        AddEditNoteUiEvent.ShowError(
                             errorStrings.resolve(MessageKey.LOAD_TAGS_FAILED),
                         ),
                     )
@@ -576,7 +576,7 @@ class AddEditEventViewModel(
             getVisibleAiActionsUseCase()
                 .catch {
                     _events.send(
-                        AddEditEventUiEvent.ShowError(
+                        AddEditNoteUiEvent.ShowError(
                             errorStrings.resolve(MessageKey.LOAD_AI_ACTIONS_FAILED),
                         ),
                     )

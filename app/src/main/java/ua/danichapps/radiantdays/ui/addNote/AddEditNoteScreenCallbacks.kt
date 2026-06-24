@@ -1,4 +1,4 @@
-package ua.danichapps.radiantdays.ui.addevent
+package ua.danichapps.radiantdays.ui.addNote
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -9,7 +9,7 @@ import androidx.compose.ui.res.stringResource
 import kotlinx.coroutines.launch
 import ua.danichapps.radiantdays.R
 
-internal data class AddEditEventScreenCallbacks(
+internal data class AddEditNoteScreenCallbacks(
     val onBackClick: () -> Unit = {},
     val onTagToggle: (String) -> Unit = {},
     val onTagsExpandedToggle: () -> Unit = {},
@@ -37,13 +37,13 @@ internal data class AddEditEventScreenCallbacks(
 
 /** Binds ViewModel and UI helpers into a stable callbacks holder. */
 @Composable
-internal fun rememberAddEditEventScreenCallbacks(
-    viewModel: AddEditEventViewModel,
+internal fun rememberAddEditNoteScreenCallbacks(
+    viewModel: AddEditNoteViewModel,
     snackbarHostState: SnackbarHostState,
     requestAlarmWithPermission: () -> Unit,
     onOpenTags: () -> Unit,
     onOpenAiActions: () -> Unit,
-): AddEditEventScreenCallbacks {
+): AddEditNoteScreenCallbacks {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val voiceUnavailableMessage = stringResource(R.string.event_voice_unavailable)
@@ -57,7 +57,7 @@ internal fun rememberAddEditEventScreenCallbacks(
         context,
         voiceUnavailableMessage,
     ) {
-        AddEditEventScreenCallbacks(
+        AddEditNoteScreenCallbacks(
             onBackClick = viewModel::onBackClick,
             onTagToggle = viewModel::onTagToggle,
             onTagsExpandedToggle = viewModel::onTagsExpandedToggle,

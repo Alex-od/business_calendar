@@ -1,4 +1,4 @@
-package ua.danichapps.radiantdays.ui.addevent
+package ua.danichapps.radiantdays.ui.addNote
 
 import android.content.res.Configuration
 import androidx.compose.foundation.layout.Box
@@ -33,9 +33,9 @@ private const val PREVIEW_DESCRIPTION = "Team sync\n\nDiscuss Q3 priorities."
     uiMode = Configuration.UI_MODE_NIGHT_YES,
 )
 @Composable
-private fun EventNoteEditorPreview() {
-    EventNoteEditorPreviewContent(
-        uiState = AddEditEventUiState(
+private fun NoteEditorPreview() {
+    NoteEditorPreviewContent(
+        uiState = AddEditNoteUiState(
             description = PREVIEW_DESCRIPTION,
             canUndoDescription = true,
             isAiKeySaved = true,
@@ -46,9 +46,9 @@ private fun EventNoteEditorPreview() {
 /** Preview: note editor with visible AI chat messages. */
 @Preview(showBackground = true, name = "Note editor with AI chat", device = Devices.PIXEL_6, heightDp = 640)
 @Composable
-private fun EventNoteEditorWithAiChatPreview() {
-    EventNoteEditorPreviewContent(
-        uiState = AddEditEventUiState(
+private fun NoteEditorWithAiChatPreview() {
+    NoteEditorPreviewContent(
+        uiState = AddEditNoteUiState(
             description = PREVIEW_DESCRIPTION,
             canUndoDescription = true,
             isAiKeySaved = true,
@@ -66,7 +66,7 @@ private fun EventNoteEditorWithAiChatPreview() {
 
 /** Shared preview wrapper with Koin and note editor state. */
 @Composable
-private fun EventNoteEditorPreviewContent(uiState: AddEditEventUiState) {
+private fun NoteEditorPreviewContent(uiState: AddEditNoteUiState) {
     val context = LocalContext.current
     KoinApplication(application = {
         androidContext(context)
@@ -85,9 +85,9 @@ private fun EventNoteEditorPreviewContent(uiState: AddEditEventUiState) {
                     largeSize = typography.headlineSmall.fontSize,
                 )
             }
-            val noteEditorState = rememberEventNoteEditorState(
+            val noteEditorState = rememberNoteEditorState(
                 description = uiState.description,
-                editingEventId = uiState.editingEventId,
+                editingNoteId = uiState.editingNoteId,
                 noteDisplayStyles = noteDisplayStyles,
                 onDescriptionChange = {},
                 onDescriptionChangeFromVoice = {},
@@ -99,10 +99,10 @@ private fun EventNoteEditorPreviewContent(uiState: AddEditEventUiState) {
                     .fillMaxWidth()
                     .height(480.dp),
             ) {
-                EventNoteEditor(
+                NoteEditor(
                     state = noteEditorState,
                     uiState = uiState,
-                    callbacks = AddEditEventScreenCallbacks(),
+                    callbacks = AddEditNoteScreenCallbacks(),
                     noteDisplayStyles = noteDisplayStyles,
                     modifier = Modifier.fillMaxSize(),
                 )

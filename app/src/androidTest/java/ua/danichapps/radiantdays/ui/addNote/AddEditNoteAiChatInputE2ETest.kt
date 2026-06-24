@@ -1,4 +1,4 @@
-package ua.danichapps.radiantdays.ui.addevent
+package ua.danichapps.radiantdays.ui.addNote
 
 import android.content.Context
 import android.util.Log
@@ -21,7 +21,7 @@ import ua.danichapps.radiantdays.R
  * End-to-end: Calendar → Add event → focus AI chat on real [MainActivity].
  */
 @RunWith(AndroidJUnit4::class)
-class AddEditEventAiChatInputE2ETest {
+class AddEditNoteAiChatInputE2ETest {
 
     @get:Rule
     val composeRule = createAndroidComposeRule<MainActivity>()

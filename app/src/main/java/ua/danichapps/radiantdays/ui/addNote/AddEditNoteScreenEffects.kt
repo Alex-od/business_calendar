@@ -1,4 +1,4 @@
-package ua.danichapps.radiantdays.ui.addevent
+package ua.danichapps.radiantdays.ui.addNote
 
 import android.Manifest
 import android.os.Build
@@ -15,11 +15,11 @@ import androidx.lifecycle.compose.LifecycleResumeEffect
 
 /** Side effects: load event, collect one-shot events, handle back and new tags. */
 @Composable
-internal fun AddEditEventScreenEffects(
-    editingEventId: Long?,
+internal fun AddEditNoteScreenEffects(
+    editingNoteId: Long?,
     initialDayMillis: Long,
     createdTagGuid: String?,
-    viewModel: AddEditEventViewModel,
+    viewModel: AddEditNoteViewModel,
     onNavigateBack: () -> Unit,
     onCreatedTagGuidConsumed: () -> Unit,
     snackbarHostState: SnackbarHostState,
@@ -29,17 +29,17 @@ internal fun AddEditEventScreenEffects(
         onPauseOrDispose { }
     }
 
-    LaunchedEffect(editingEventId) {
-        if (editingEventId != null) viewModel.loadEvent(editingEventId)
+    LaunchedEffect(editingNoteId) {
+        if (editingNoteId != null) viewModel.loadNote(editingNoteId)
         else viewModel.setInitialDay(initialDayMillis)
     }
 
     LaunchedEffect(Unit) {
         viewModel.events.collect { event ->
             when (event) {
-                is AddEditEventUiEvent.NavigateBack -> onNavigateBack()
-                is AddEditEventUiEvent.ShowError -> snackbarHostState.showSnackbar(event.message)
-                is AddEditEventUiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
+                is AddEditNoteUiEvent.NavigateBack -> onNavigateBack()
+                is AddEditNoteUiEvent.ShowError -> snackbarHostState.showSnackbar(event.message)
+                is AddEditNoteUiEvent.ShowSnackbar -> snackbarHostState.showSnackbar(event.message)
             }
         }
     }

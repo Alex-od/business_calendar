@@ -1,4 +1,4 @@
-package ua.danichapps.radiantdays.ui.addevent
+package ua.danichapps.radiantdays.ui.addNote
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -51,7 +51,7 @@ private val MinChatAreaHeight = 80.dp
 private val ChatDividerVerticalSpace = 12.dp
 
 @Stable
-internal class EventNoteEditorState(
+internal class NoteEditorState(
     val descriptionValue: TextFieldValue,
     val boldTyping: Boolean,
     val isDescriptionFocused: Boolean,
@@ -84,15 +84,15 @@ internal class EventNoteEditorState(
 
 /** Creates and remembers note editor state synced with ViewModel description. */
 @Composable
-internal fun rememberEventNoteEditorState(
+internal fun rememberNoteEditorState(
     description: String,
-    editingEventId: Long?,
+    editingNoteId: Long?,
     noteDisplayStyles: NoteDisplayStyles,
     onDescriptionChange: (String) -> Unit,
     onDescriptionChangeFromVoice: (String) -> Unit,
     onDescriptionUndo: () -> Unit,
     onVoiceInputUnavailable: () -> Unit,
-): EventNoteEditorState {
+): NoteEditorState {
     val context = LocalContext.current
     val localeStore: AppLocaleStore = koinInject()
     val locale = remember(context) { localeStore.resolveLocale(context) }
@@ -100,9 +100,9 @@ internal fun rememberEventNoteEditorState(
     var boldTyping by remember { mutableStateOf(false) }
     var isDescriptionFocused by remember { mutableStateOf(false) }
     var forceExternalSync by remember { mutableIntStateOf(0) }
-    var localMarkdown by remember(editingEventId) { mutableStateOf(description) }
+    var localMarkdown by remember(editingNoteId) { mutableStateOf(description) }
 
-    var descriptionValue by remember(editingEventId) {
+    var descriptionValue by remember(editingNoteId) {
         mutableStateOf(
             noteMarkdownToFieldValue(
                 markdown = description,
@@ -154,7 +154,7 @@ internal fun rememberEventNoteEditorState(
         onUnavailable = onVoiceInputUnavailable,
     )
 
-    return EventNoteEditorState(
+    return NoteEditorState(
         descriptionValue = descriptionValue,
         boldTyping = boldTyping,
         isDescriptionFocused = isDescriptionFocused,
@@ -172,8 +172,8 @@ internal fun rememberEventNoteEditorState(
 /** Toolbar row shared by the note editor and the chat message edit dialog. */
 @Composable
 internal fun NoteEditorToolbarRow(
-    state: EventNoteEditorState,
-    uiState: AddEditEventUiState,
+    state: NoteEditorState,
+    uiState: AddEditNoteUiState,
     noteDisplayStyles: NoteDisplayStyles,
     canUndo: Boolean = uiState.canUndoDescription,
 ) {
@@ -210,10 +210,10 @@ internal fun NoteEditorToolbarRow(
 
 /** Rich note field with toolbar, voice input, and optional chat list. */
 @Composable
-internal fun EventNoteEditor(
-    state: EventNoteEditorState,
-    uiState: AddEditEventUiState,
-    callbacks: AddEditEventScreenCallbacks,
+internal fun NoteEditor(
+    state: NoteEditorState,
+    uiState: AddEditNoteUiState,
+    callbacks: AddEditNoteScreenCallbacks,
     noteDisplayStyles: NoteDisplayStyles,
     modifier: Modifier = Modifier,
     onMessageClick: (Int) -> Unit = {},

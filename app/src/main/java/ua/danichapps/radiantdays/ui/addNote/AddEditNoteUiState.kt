@@ -1,12 +1,12 @@
-package ua.danichapps.radiantdays.ui.addevent
+package ua.danichapps.radiantdays.ui.addNote
 
 import ua.danichapps.radiantdays.domain.model.AiAction
 import ua.danichapps.radiantdays.domain.model.AiChatMessage
 import ua.danichapps.radiantdays.domain.model.Tag
 
-data class AddEditEventUiState(
+data class AddEditNoteUiState(
     val isLoading: Boolean = false,
-    val editingEventId: Long? = null,
+    val editingNoteId: Long? = null,
 
     val title: String = "",
     val description: String = "",

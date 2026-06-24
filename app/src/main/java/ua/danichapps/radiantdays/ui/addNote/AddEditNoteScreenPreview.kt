@@ -1,4 +1,4 @@
-package ua.danichapps.radiantdays.ui.addevent
+package ua.danichapps.radiantdays.ui.addNote
 
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
@@ -17,7 +17,7 @@ import ua.danichapps.radiantdays.ui.theme.RadiantDaysTheme
 /** Preview: add-event screen with tags and description. */
 @Preview(showBackground = true, name = "Add event", device = Devices.PIXEL_6)
 @Composable
-private fun AddEditEventScreenPreview() {
+private fun AddEditNoteScreenPreview() {
     val context = LocalContext.current
     KoinApplication(application = {
         androidContext(context)
@@ -28,8 +28,8 @@ private fun AddEditEventScreenPreview() {
         )
     }) {
         RadiantDaysTheme(dynamicColor = false) {
-            AddEditEventScreenContent(
-                uiState = AddEditEventUiState(
+            AddEditNoteScreenContent(
+                uiState = AddEditNoteUiState(
                     description = "Team sync\n\nDiscuss Q3 priorities.",
                     tags = listOf(
                         Tag(guid = "work", name = "Work", color = EventColor.BLUE, isPinned = true),
@@ -37,7 +37,7 @@ private fun AddEditEventScreenPreview() {
                     ),
                     selectedTagGuids = setOf("work"),
                 ),
-                callbacks = AddEditEventScreenCallbacks(),
+                callbacks = AddEditNoteScreenCallbacks(),
                 snackbarHostState = remember { SnackbarHostState() },
             )
         }
@@ -47,7 +47,7 @@ private fun AddEditEventScreenPreview() {
 /** Preview: add-event screen in loading state. */
 @Preview(showBackground = true, name = "Loading", device = Devices.PIXEL_6)
 @Composable
-private fun AddEditEventScreenLoadingPreview() {
+private fun AddEditNoteScreenLoadingPreview() {
     val context = LocalContext.current
     KoinApplication(application = {
         androidContext(context)
@@ -58,9 +58,9 @@ private fun AddEditEventScreenLoadingPreview() {
         )
     }) {
         RadiantDaysTheme(dynamicColor = false) {
-            AddEditEventScreenContent(
-                uiState = AddEditEventUiState(isLoading = true),
-                callbacks = AddEditEventScreenCallbacks(),
+            AddEditNoteScreenContent(
+                uiState = AddEditNoteUiState(isLoading = true),
+                callbacks = AddEditNoteScreenCallbacks(),
                 snackbarHostState = remember { SnackbarHostState() },
             )
         }

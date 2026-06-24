@@ -1,4 +1,4 @@
-package ua.danichapps.radiantdays.ui.addevent
+package ua.danichapps.radiantdays.ui.addNote
 
 import android.content.Context
 import android.util.Log
@@ -8,7 +8,6 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
 import androidx.compose.ui.Modifier
@@ -34,7 +33,7 @@ import ua.danichapps.radiantdays.ui.theme.RadiantDaysTheme
  * Mirrors production layout: Scaffold bottomBar + [KeyboardInsetsPolicy].
  */
 @RunWith(AndroidJUnit4::class)
-class AddEditEventAiChatInputUiTest {
+class AddEditNoteAiChatInputUiTest {
 
     @get:Rule
     val composeRule = createAndroidComposeRule<ComponentActivity>()

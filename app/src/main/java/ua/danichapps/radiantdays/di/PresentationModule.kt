@@ -18,8 +18,8 @@ import ua.danichapps.radiantdays.notification.AlarmScheduler
 import ua.danichapps.radiantdays.notification.EventNotificationManager
 import ua.danichapps.radiantdays.sync.DeviceIdProvider
 import ua.danichapps.radiantdays.sync.WebSocketBridgeClient
-import ua.danichapps.radiantdays.ui.addevent.AddEditEventViewModel
-import ua.danichapps.radiantdays.ui.addevent.NoteEditorPreferencesStore
+import ua.danichapps.radiantdays.ui.addNote.AddEditNoteViewModel
+import ua.danichapps.radiantdays.ui.addNote.NoteEditorPreferencesStore
 import ua.danichapps.radiantdays.ui.theme.AppThemeStore
 import ua.danichapps.radiantdays.ui.aiactions.AiActionsViewModel
 import ua.danichapps.radiantdays.ui.calendar.CalendarViewModel
@@ -44,7 +44,7 @@ val presentationModule = module {
     }
 
     viewModel {
-        AddEditEventViewModel(
+        AddEditNoteViewModel(
             addEventUseCase = get(),
             updateEventUseCase = get(),
             getTagsUseCase = get(),

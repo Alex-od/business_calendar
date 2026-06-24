@@ -13,7 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import ua.danichapps.radiantdays.ui.addevent.AddEditEventScreen
+import ua.danichapps.radiantdays.ui.addNote.AddEditNoteScreen
 import ua.danichapps.radiantdays.ui.calendar.CalendarScreen
 import ua.danichapps.radiantdays.ui.aiactions.AiActionsScreen
 import ua.danichapps.radiantdays.ui.settings.AiSettingsScreen
@@ -123,9 +123,9 @@ fun AppNavigation(
                 .getStateFlow<String?>(Screen.TagSettings.RESULT_CREATED_TAG_GUID, null)
                 .collectAsStateWithLifecycle()
 
-            AddEditEventScreen(
+            AddEditNoteScreen(
                 initialDayMillis = selectedDay,
-                editingEventId = null,
+                editingNoteId = null,
                 onNavigateBack = { navController.popBackStack() },
                 onOpenTags = { navController.navigate(Screen.TagSettings.createRoute(returnAfterCreate = true)) },
                 onOpenAiActions = { navController.navigate(Screen.AiActions.route) },
@@ -148,9 +148,9 @@ fun AppNavigation(
                 .getStateFlow<String?>(Screen.TagSettings.RESULT_CREATED_TAG_GUID, null)
                 .collectAsStateWithLifecycle()
 
-            AddEditEventScreen(
+            AddEditNoteScreen(
                 initialDayMillis = System.currentTimeMillis(),
-                editingEventId = eventId,
+                editingNoteId = eventId,
                 onNavigateBack = { navController.popBackStack() },
                 onOpenTags = { navController.navigate(Screen.TagSettings.createRoute(returnAfterCreate = true)) },
                 onOpenAiActions = { navController.navigate(Screen.AiActions.route) },

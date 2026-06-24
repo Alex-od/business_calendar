@@ -1,4 +1,4 @@
-package ua.danichapps.radiantdays.ui.addevent
+package ua.danichapps.radiantdays.ui.addNote
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement

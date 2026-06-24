@@ -1,4 +1,4 @@
-package ua.danichapps.radiantdays.ui.addevent
+package ua.danichapps.radiantdays.ui.addNote
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Column
@@ -33,14 +33,14 @@ internal fun ChatMessageEditScreen(
     messageIndex: Int,
     initialMarkdown: String,
     messageRole: AiChatRole,
-    uiState: AddEditEventUiState,
-    callbacks: AddEditEventScreenCallbacks,
+    uiState: AddEditNoteUiState,
+    callbacks: AddEditNoteScreenCallbacks,
     noteDisplayStyles: NoteDisplayStyles,
     onDismiss: () -> Unit,
 ) {
-    val editorState = rememberEventNoteEditorState(
+    val editorState = rememberNoteEditorState(
         description = initialMarkdown,
-        editingEventId = uiState.editingEventId,
+        editingNoteId = uiState.editingNoteId,
         noteDisplayStyles = noteDisplayStyles,
         onDescriptionChange = { content ->
             callbacks.onAiChatMessageEdit(messageIndex, content)
