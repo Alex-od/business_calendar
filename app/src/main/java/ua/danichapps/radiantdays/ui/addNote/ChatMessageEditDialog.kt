@@ -19,6 +19,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import java.util.Locale
 import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.domain.model.AiChatRole
 import ua.danichapps.radiantdays.ui.common.NoteDisplayStyles
@@ -36,11 +37,13 @@ internal fun ChatMessageEditScreen(
     uiState: AddEditNoteUiState,
     callbacks: AddEditNoteScreenCallbacks,
     noteDisplayStyles: NoteDisplayStyles,
+    locale: Locale,
     onDismiss: () -> Unit,
 ) {
     val editorState = rememberNoteEditorState(
         description = initialMarkdown,
         editingNoteId = uiState.editingNoteId,
+        locale = locale,
         noteDisplayStyles = noteDisplayStyles,
         onDescriptionChange = { content ->
             callbacks.onAiChatMessageEdit(messageIndex, content)

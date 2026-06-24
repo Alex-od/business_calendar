@@ -10,6 +10,7 @@ import ua.danichapps.radiantdays.domain.usecase.DeleteEventUseCase
 import ua.danichapps.radiantdays.domain.usecase.DeleteTagUseCase
 import ua.danichapps.radiantdays.domain.usecase.EnsureBuiltinAiActionsUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetAiActionsUseCase
+import ua.danichapps.radiantdays.domain.usecase.GetEventByIdUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetEventsByTagUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetEventsForDayUseCase
 import ua.danichapps.radiantdays.domain.usecase.GetEventsForMonthUseCase
@@ -28,6 +29,7 @@ import ua.danichapps.radiantdays.locale.BuiltinAiActionStrings
 import ua.danichapps.radiantdays.locale.ResourceAiActionLocalizer
 
 val domainModule = module {
+    factory { GetEventByIdUseCase(get()) }
     factory { GetEventsForDayUseCase(get()) }
     factory { GetEventsByTagUseCase(get()) }
     factory { GetEventsForMonthUseCase(get()) }

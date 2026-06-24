@@ -27,7 +27,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.TextFieldValue
@@ -35,7 +34,6 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.domain.model.AiChatRole
-import ua.danichapps.radiantdays.locale.AppLocaleStore
 import ua.danichapps.radiantdays.ui.common.NoteDisplayStyles
 import ua.danichapps.radiantdays.ui.common.NoteFormatToolbar
 import ua.danichapps.radiantdays.ui.common.RichNoteTextField
@@ -45,7 +43,7 @@ import ua.danichapps.radiantdays.ui.common.noteFieldValueToMarkdown
 import ua.danichapps.radiantdays.ui.common.noteMarkdownToFieldValue
 import ua.danichapps.radiantdays.ui.common.preserveSpansOnEdit
 import ua.danichapps.radiantdays.ui.common.rememberVoiceInputLauncher
-import org.koin.compose.koinInject
+import java.util.Locale
 
 private val MinChatAreaHeight = 80.dp
 private val ChatDividerVerticalSpace = 12.dp
@@ -87,16 +85,13 @@ internal class NoteEditorState(
 internal fun rememberNoteEditorState(
     description: String,
     editingNoteId: Long?,
+    locale: Locale,
     noteDisplayStyles: NoteDisplayStyles,
     onDescriptionChange: (String) -> Unit,
     onDescriptionChangeFromVoice: (String) -> Unit,
     onDescriptionUndo: () -> Unit,
     onVoiceInputUnavailable: () -> Unit,
 ): NoteEditorState {
-    val context = LocalContext.current
-    val localeStore: AppLocaleStore = koinInject()
-    val locale = remember(context) { localeStore.resolveLocale(context) }
-
     var boldTyping by remember { mutableStateOf(false) }
     var isDescriptionFocused by remember { mutableStateOf(false) }
     var forceExternalSync by remember { mutableIntStateOf(0) }

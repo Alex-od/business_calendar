@@ -21,6 +21,7 @@ import ua.danichapps.radiantdays.domain.model.AiChatRole
 import ua.danichapps.radiantdays.locale.AppLocaleStore
 import ua.danichapps.radiantdays.ui.common.NoteDisplayStyles
 import ua.danichapps.radiantdays.ui.theme.RadiantDaysTheme
+import java.util.Locale
 
 private const val PREVIEW_DESCRIPTION = "Team sync\n\nDiscuss Q3 priorities."
 
@@ -85,9 +86,12 @@ private fun NoteEditorPreviewContent(uiState: AddEditNoteUiState) {
                     largeSize = typography.headlineSmall.fontSize,
                 )
             }
+            val localeStore = org.koin.compose.koinInject<AppLocaleStore>()
+            val locale = remember(context) { localeStore.resolveLocale(context) }
             val noteEditorState = rememberNoteEditorState(
                 description = uiState.description,
                 editingNoteId = uiState.editingNoteId,
+                locale = locale,
                 noteDisplayStyles = noteDisplayStyles,
                 onDescriptionChange = {},
                 onDescriptionChangeFromVoice = {},

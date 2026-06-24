@@ -30,6 +30,11 @@ private data class IndexedChatMessage(
     val message: AiChatMessage,
 )
 
+private const val CONTENT_TYPE_ACTION_LABEL = "action_label"
+private const val CONTENT_TYPE_USER_MESSAGE = "user_message"
+private const val CONTENT_TYPE_ASSISTANT_MESSAGE = "assistant_message"
+private const val CONTENT_TYPE_LOADING = "loading"
+
 /** Action label of the first user message when it mirrors the note text and is hidden. */
 private fun List<AiChatMessage>.hiddenFirstActionLabel(
     noteDescription: String,
@@ -112,7 +117,7 @@ fun InlineAiChatMessages(
         contentPadding = PaddingValues(bottom = 0.dp),
     ) {
         hiddenActionLabel?.let { label ->
-            item(key = "action-label") {
+            item(key = "action-label", contentType = CONTENT_TYPE_ACTION_LABEL) {
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelMedium,
@@ -124,6 +129,13 @@ fun InlineAiChatMessages(
         itemsIndexed(
             visibleMessages,
             key = { _, item -> "${item.index}-${item.message.role}" },
+            contentType = { _, item ->
+                if (item.message.role == AiChatRole.USER) {
+                    CONTENT_TYPE_USER_MESSAGE
+                } else {
+                    CONTENT_TYPE_ASSISTANT_MESSAGE
+                }
+            },
         ) { _, item ->
             val displayContent = item.message.visibleContent(noteDescription)
             ChatMessageBubble(
@@ -157,7 +169,7 @@ fun InlineAiChatMessages(
             )
         }
         if (loading) {
-            item(key = "loading") {
+            item(key = "loading", contentType = CONTENT_TYPE_LOADING) {
                 AiChatLoadingIndicator()
             }
         }

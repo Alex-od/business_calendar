@@ -18,15 +18,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import org.koin.compose.koinInject
 import ua.danichapps.radiantdays.R
-import ua.danichapps.radiantdays.locale.AppLocaleStore
 import ua.danichapps.radiantdays.ui.common.NoteDisplayStyles
 import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Locale
 
 /** Note editor inside the alarm drawer; hosts date/time pickers for the alarm. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,12 +32,10 @@ import java.util.Calendar
 internal fun NoteForm(
     uiState: AddEditNoteUiState,
     callbacks: AddEditNoteScreenCallbacks,
+    locale: Locale,
     modifier: Modifier = Modifier,
     onMessageClick: (Int) -> Unit = {},
 ) {
-    val context = LocalContext.current
-    val localeStore: AppLocaleStore = koinInject()
-    val locale = remember(context) { localeStore.resolveLocale(context) }
     val dateFormat = remember(locale) { SimpleDateFormat("dd MMM yyyy", locale) }
     val timeFormat = remember(locale) { SimpleDateFormat("HH:mm", locale) }
     val typography = MaterialTheme.typography
@@ -57,6 +53,7 @@ internal fun NoteForm(
     val noteEditorState = rememberNoteEditorState(
         description = uiState.description,
         editingNoteId = uiState.editingNoteId,
+        locale = locale,
         noteDisplayStyles = noteDisplayStyles,
         onDescriptionChange = callbacks.onDescriptionChange,
         onDescriptionChangeFromVoice = callbacks.onDescriptionChangeFromVoice,

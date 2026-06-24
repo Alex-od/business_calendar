@@ -72,7 +72,11 @@ internal fun AiActionsBottomSheetContent(
             }
         } else {
             LazyColumn {
-                items(actions, key = { it.guid }) { action ->
+                items(
+                    actions,
+                    key = { it.guid },
+                    contentType = { "ai_action" },
+                ) { action ->
                     ListItem(
                         modifier = Modifier.clickable { onActionClick(action.guid) },
                         headlineContent = { Text(action.name) },

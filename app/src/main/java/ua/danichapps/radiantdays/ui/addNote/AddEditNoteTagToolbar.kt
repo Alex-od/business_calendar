@@ -19,6 +19,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -74,9 +75,13 @@ private fun TagQuickAccessSection(
     onOpenTags: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val selectedTags = tags.filter { it.guid in selectedTagGuids }
-    val unselectedTags = tags.filter { it.guid !in selectedTagGuids }
-        .sortedWith(compareByDescending<Tag> { it.isPinned }.thenBy { it.name })
+    val selectedTags = remember(tags, selectedTagGuids) {
+        tags.filter { it.guid in selectedTagGuids }
+    }
+    val unselectedTags = remember(tags, selectedTagGuids) {
+        tags.filter { it.guid !in selectedTagGuids }
+            .sortedWith(compareByDescending<Tag> { it.isPinned }.thenBy { it.name })
+    }
     val selectedListState = rememberLazyListState()
     val tagGuids = tags.map { it.guid }
 

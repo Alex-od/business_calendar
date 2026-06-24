@@ -1,9 +1,11 @@
 package ua.danichapps.radiantdays.ui.addNote
 
+import androidx.compose.runtime.Immutable
 import ua.danichapps.radiantdays.domain.model.AiAction
 import ua.danichapps.radiantdays.domain.model.AiChatMessage
 import ua.danichapps.radiantdays.domain.model.Tag
 
+@Immutable
 data class AddEditNoteUiState(
     val isLoading: Boolean = false,
     val editingNoteId: Long? = null,
@@ -18,7 +20,6 @@ data class AddEditNoteUiState(
     val selectedTagGuids: Set<String> = emptySet(),
     val tagsExpanded: Boolean = false,
 
-    val titleError: String? = null,
     val descriptionError: String? = null,
 
     val createdAtMillis: Long? = null,

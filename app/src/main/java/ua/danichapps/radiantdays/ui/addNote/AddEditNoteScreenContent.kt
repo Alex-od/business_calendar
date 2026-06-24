@@ -21,10 +21,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import org.koin.compose.koinInject
 import ua.danichapps.radiantdays.domain.model.visibleContent
+import ua.danichapps.radiantdays.locale.AppLocaleStore
 import ua.danichapps.radiantdays.ui.common.KeyboardInsetsPolicy
 import ua.danichapps.radiantdays.ui.common.NoteDisplayStyles
+import java.util.Locale
 
 /** Root scaffold: toolbar, form or loading state, AI chat bar, and actions sheet. */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -34,6 +38,9 @@ internal fun AddEditNoteScreenContent(
     callbacks: AddEditNoteScreenCallbacks,
     snackbarHostState: SnackbarHostState,
 ) {
+    val context = LocalContext.current
+    val localeStore: AppLocaleStore = koinInject()
+    val locale = remember(context) { localeStore.resolveLocale(context) }
     var editingMessageIndex by remember { mutableIntStateOf(-1) }
 
     Box(Modifier.fillMaxSize()) {
@@ -47,6 +54,7 @@ internal fun AddEditNoteScreenContent(
                 else -> AddEditNoteBody(
                     uiState = uiState,
                     callbacks = callbacks,
+                    locale = locale,
                     padding = padding,
                     onMessageClick = { editingMessageIndex = it },
                 )
@@ -71,6 +79,7 @@ internal fun AddEditNoteScreenContent(
                     uiState = uiState,
                     callbacks = callbacks,
                     noteDisplayStyles = noteDisplayStyles,
+                    locale = locale,
                     onDismiss = { editingMessageIndex = -1 },
                 )
             }
@@ -106,6 +115,7 @@ private fun AddEditNoteLoadingContent(padding: PaddingValues) {
 private fun AddEditNoteBody(
     uiState: AddEditNoteUiState,
     callbacks: AddEditNoteScreenCallbacks,
+    locale: Locale,
     padding: PaddingValues,
     onMessageClick: (Int) -> Unit,
 ) {
@@ -113,6 +123,7 @@ private fun AddEditNoteBody(
         NoteForm(
             uiState = uiState,
             callbacks = callbacks,
+            locale = locale,
             onMessageClick = onMessageClick,
             modifier = Modifier.fillMaxSize(),
         )
