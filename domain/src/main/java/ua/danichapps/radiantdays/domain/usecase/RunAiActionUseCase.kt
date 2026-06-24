@@ -1,5 +1,6 @@
 package ua.danichapps.radiantdays.domain.usecase
 
+import ua.danichapps.radiantdays.domain.localization.AiActionLocalizer
 import ua.danichapps.radiantdays.domain.model.AiActionResult
 import ua.danichapps.radiantdays.domain.model.AiChatMessage
 import ua.danichapps.radiantdays.domain.model.AiChatRole
@@ -13,6 +14,7 @@ import ua.danichapps.radiantdays.domain.util.AiPromptTemplate
 class RunAiActionUseCase(
     private val repository: AiActionRepository,
     private val clientProvider: AiCompletionClientProvider,
+    private val localizer: AiActionLocalizer,
 ) {
     suspend operator fun invoke(
         actionGuid: String,
@@ -26,6 +28,7 @@ class RunAiActionUseCase(
             )
         }
         val action = repository.getActionByGuid(actionGuid)
+            ?.let(localizer::localize)
             ?: return DomainResult.Error(
                 IllegalArgumentException("Action not found"),
                 MessageKey.AI_ACTION_NOT_FOUND,

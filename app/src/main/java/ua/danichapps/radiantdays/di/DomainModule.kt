@@ -1,6 +1,7 @@
 package ua.danichapps.radiantdays.di
 
 import org.koin.dsl.module
+import ua.danichapps.radiantdays.domain.localization.AiActionLocalizer
 import ua.danichapps.radiantdays.domain.usecase.AddAiActionUseCase
 import ua.danichapps.radiantdays.domain.usecase.AddTagUseCase
 import ua.danichapps.radiantdays.domain.usecase.AddEventUseCase
@@ -23,6 +24,8 @@ import ua.danichapps.radiantdays.domain.usecase.UpdateAiActionUseCase
 import ua.danichapps.radiantdays.domain.usecase.UpdateEventUseCase
 import ua.danichapps.radiantdays.domain.usecase.UpdateTagUseCase
 import ua.danichapps.radiantdays.domain.usecase.ValidateAiApiKeyUseCase
+import ua.danichapps.radiantdays.locale.BuiltinAiActionStrings
+import ua.danichapps.radiantdays.locale.ResourceAiActionLocalizer
 
 val domainModule = module {
     factory { GetEventsForDayUseCase(get()) }
@@ -37,14 +40,16 @@ val domainModule = module {
     factory { AddTagUseCase(get()) }
     factory { UpdateTagUseCase(get()) }
     factory { DeleteTagUseCase(get()) }
-    factory { GetAiActionsUseCase(get()) }
-    factory { GetVisibleAiActionsUseCase(get()) }
+    single { BuiltinAiActionStrings(get()) }
+    single<AiActionLocalizer> { ResourceAiActionLocalizer(get()) }
+    factory { GetAiActionsUseCase(get(), get()) }
+    factory { GetVisibleAiActionsUseCase(get(), get()) }
     factory { EnsureBuiltinAiActionsUseCase(get()) }
     factory { AddAiActionUseCase(get()) }
     factory { UpdateAiActionUseCase(get()) }
     factory { DeleteAiActionUseCase(get()) }
     factory { ReorderAiActionsUseCase(get()) }
-    factory { RunAiActionUseCase(get(), get()) }
+    factory { RunAiActionUseCase(get(), get(), get()) }
     factory { ContinueAiChatUseCase(get()) }
     factory { ValidateAiApiKeyUseCase(get()) }
 }

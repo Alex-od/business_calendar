@@ -113,6 +113,17 @@
     <string name="ai_action_name_required_local">Enter action name</string>
     <string name="ai_action_prompt_required_local">Enter AI instruction</string>
 
+    <!-- Built-in AI actions -->
+    <string name="ai_action_builtin_improve_name">Improve text</string>
+    <string name="ai_action_builtin_improve_description">Fixes spelling and style</string>
+    <string name="ai_action_builtin_improve_prompt">Fix spelling and style, preserve meaning:\n{{text}}</string>
+    <string name="ai_action_builtin_shorten_name">Shorten</string>
+    <string name="ai_action_builtin_shorten_description">Brief note summary</string>
+    <string name="ai_action_builtin_shorten_prompt">Shorten the following text to 1–2 sentences, preserve meaning:\n{{text}}</string>
+    <string name="ai_action_builtin_checklist_name">Task list</string>
+    <string name="ai_action_builtin_checklist_description">Converts text into a checklist</string>
+    <string name="ai_action_builtin_checklist_prompt">Convert the following text into a bulleted checklist:\n{{text}}</string>
+
     <!-- AI chat -->
     <string name="ai_chat_message">Message to AI</string>
     <string name="ai_chat_you">You</string>

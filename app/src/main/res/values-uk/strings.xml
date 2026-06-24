@@ -113,6 +113,17 @@
     <string name="ai_action_name_required_local">Введіть назву дії</string>
     <string name="ai_action_prompt_required_local">Введіть інструкцію для AI</string>
 
+    <!-- Built-in AI actions -->
+    <string name="ai_action_builtin_improve_name">Покращити текст</string>
+    <string name="ai_action_builtin_improve_description">Виправляє орфографію та стиль</string>
+    <string name="ai_action_builtin_improve_prompt">Виправ орфографію та стиль, збережи зміст:\n{{text}}</string>
+    <string name="ai_action_builtin_shorten_name">Скоротити</string>
+    <string name="ai_action_builtin_shorten_description">Короткий підсумок нотатки</string>
+    <string name="ai_action_builtin_shorten_prompt">Скороти наступний текст до 1–2 речень, збережи зміст:\n{{text}}</string>
+    <string name="ai_action_builtin_checklist_name">Список завдань</string>
+    <string name="ai_action_builtin_checklist_description">Перетворює текст на чекліст</string>
+    <string name="ai_action_builtin_checklist_prompt">Перетвори наступний текст на маркований чекліст:\n{{text}}</string>
+
     <!-- AI chat -->
     <string name="ai_chat_message">Повідомлення до AI</string>
     <string name="ai_chat_you">Ви</string>
