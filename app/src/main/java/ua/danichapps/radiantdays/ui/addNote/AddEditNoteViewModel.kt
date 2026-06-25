@@ -27,9 +27,7 @@ import ua.danichapps.radiantdays.domain.usecase.RunAiActionUseCase
 import ua.danichapps.radiantdays.locale.AppLocaleStore
 import ua.danichapps.radiantdays.notification.AlarmScheduler
 import ua.danichapps.radiantdays.widget.CalendarWidgetUpdater
-import java.util.Calendar
 
-private const val DEFAULT_ALARM_OFFSET_HOURS = 1L
 private const val AUTO_SAVE_DEBOUNCE_MS = 500L
 
 class AddEditNoteViewModel(
@@ -53,7 +51,6 @@ class AddEditNoteViewModel(
     private val _events = Channel<AddEditNoteUiEvent>(Channel.BUFFERED)
     val events: Flow<AddEditNoteUiEvent> = _events.receiveAsFlow()
 
-    private val descriptionUndo = NoteDescriptionUndoController(viewModelScope)
     private val saveCoordinator = NoteSaveCoordinator(
         addEventUseCase = addEventUseCase,
         updateEventUseCase = updateEventUseCase,
@@ -69,6 +66,12 @@ class AddEditNoteViewModel(
         debounceMs = AUTO_SAVE_DEBOUNCE_MS,
         readState = { _uiState.value },
         save = saveCoordinator::save,
+    )
+    private val editor = NoteEditorFeature(
+        scope = viewModelScope,
+        readState = { _uiState.value },
+        updateState = { transform -> _uiState.update(transform) },
+        onScheduleAutoSave = autoSave::schedule,
     )
     private val tagsState: StateFlow<List<Tag>> = getTagsUseCase()
         .catch {
@@ -93,7 +96,7 @@ class AddEditNoteViewModel(
             _events.send(AddEditNoteUiEvent.ShowError(key, args, cause))
         },
         onScheduleAutoSave = autoSave::schedule,
-        onSyncDescriptionFromFirstChatMessage = ::applyDiscreteDescriptionChange,
+        onSyncDescriptionFromFirstChatMessage = editor::applyDiscreteDescriptionChange,
     )
 
     init {
@@ -155,7 +158,7 @@ class AddEditNoteViewModel(
             _uiState.update { it.copy(isLoading = true) }
             val event = getEventByIdUseCase(id)
             if (event != null) {
-                descriptionUndo.clear(::updateCanUndoDescription)
+                editor.clearUndoHistory()
                 val chatMessages = event.aiChatMessages.normalizeFirstUserMessage(event.description)
                 _uiState.update {
                     it.copy(
@@ -185,117 +188,76 @@ class AddEditNoteViewModel(
 
     /** Sets start time to 09:00 on the given day for a new event. */
     fun setInitialDay(dayMillis: Long) {
-        descriptionUndo.clear(::updateCanUndoDescription)
-        val startAt9 = Calendar.getInstance().apply {
-            timeInMillis = dayMillis
-            set(Calendar.HOUR_OF_DAY, 9)
-            set(Calendar.MINUTE, 0)
-            set(Calendar.SECOND, 0)
-            set(Calendar.MILLISECOND, 0)
-        }.timeInMillis
-        _uiState.update { it.copy(startTimeMillis = startAt9) }
+        editor.setInitialDay(dayMillis)
     }
 
     /** Updates description with grouped undo support for typing bursts. */
     fun onDescriptionChange(value: String) {
-        val current = _uiState.value.description
-        val next = descriptionUndo.onTypingChange(value, current, ::updateCanUndoDescription) ?: return
-        setDescription(next)
+        editor.onDescriptionChange(value)
     }
 
     /** Applies voice input as a single undoable description change. */
     fun onDescriptionChangeFromVoice(value: String) {
-        applyDiscreteDescriptionChange(value)
+        editor.onDescriptionChangeFromVoice(value)
     }
 
     /** Reverts description to the previous undo snapshot or in-progress group. */
     fun onDescriptionUndo() {
-        val previous = descriptionUndo.undo(::updateCanUndoDescription) ?: return
-        setDescription(previous, scheduleSave = false)
+        editor.onDescriptionUndo()
     }
 
     /** Sets default alarm one hour ahead if none exists. */
     fun onAddAlarmClick() {
-        _uiState.update { state ->
-            if (state.alarmTimeMillis != null) return@update state
-            state.copy(alarmTimeMillis = System.currentTimeMillis() + DEFAULT_ALARM_OFFSET_HOURS * 3_600_000L)
-        }
-        autoSave.schedule()
+        editor.onAddAlarmClick()
     }
 
     /** Clears the alarm for this event. */
     fun onRemoveAlarmClick() {
-        _uiState.update { it.copy(alarmTimeMillis = null) }
-        autoSave.schedule()
+        editor.onRemoveAlarmClick()
     }
 
     /** Updates alarm date/time. */
     fun onAlarmTimeChange(millis: Long) {
-        _uiState.update { it.copy(alarmTimeMillis = millis) }
-        autoSave.schedule()
+        editor.onAlarmTimeChange(millis)
     }
 
     /** Toggles event completed flag. */
     fun onIsCompletedChange(value: Boolean) {
-        _uiState.update { it.copy(isCompleted = value) }
-        autoSave.schedule()
+        editor.onIsCompletedChange(value)
     }
 
     /** Sets how many minutes before the alarm to notify. */
     fun onNotificationMinutesChange(min: Int) {
-        _uiState.update { it.copy(notificationMinutesBefore = min) }
-        autoSave.schedule()
+        editor.onNotificationMinutesChange(min)
     }
 
     /** Adds or removes a tag from the selected set. */
     fun onTagToggle(tagGuid: String) {
-        _uiState.update { state ->
-            val next = if (tagGuid in state.selectedTagGuids) {
-                state.selectedTagGuids - tagGuid
-            } else {
-                state.selectedTagGuids + tagGuid
-            }
-            state.copy(selectedTagGuids = next)
-        }
-        autoSave.schedule()
+        editor.onTagToggle(tagGuid)
     }
 
     /** Selects a tag created in settings and returns to this screen. */
     fun onTagAddedFromSettings(tagGuid: String) {
-        _uiState.update { state ->
-            state.copy(selectedTagGuids = state.selectedTagGuids + tagGuid)
-        }
-        autoSave.schedule()
+        editor.onTagAddedFromSettings(tagGuid)
     }
 
     /** Expands or collapses the unselected tags row. */
-    fun onTagsExpandedToggle() = _uiState.update { it.copy(tagsExpanded = !it.tagsExpanded) }
+    fun onTagsExpandedToggle() = editor.onTagsExpandedToggle()
+
+    private var isNavigatingBack = false
 
     /** Flushes pending save and navigates back. */
     fun onBackClick() {
+        if (isNavigatingBack) return
+        isNavigatingBack = true
         autoSave.cancel()
         viewModelScope.launch {
-            autoSave.flushAndSave()
-            _events.send(AddEditNoteUiEvent.NavigateBack)
-        }
-    }
-
-    private fun setDescription(value: String, scheduleSave: Boolean = true) {
-        _uiState.update { it.copy(description = value, descriptionError = null) }
-        if (scheduleSave) {
-            autoSave.schedule()
-        }
-    }
-
-    private fun applyDiscreteDescriptionChange(value: String) {
-        val current = _uiState.value.description
-        val next = descriptionUndo.onDiscreteChange(value, current, ::updateCanUndoDescription) ?: return
-        setDescription(next)
-    }
-
-    private fun updateCanUndoDescription(canUndo: Boolean) {
-        if (_uiState.value.canUndoDescription != canUndo) {
-            _uiState.update { it.copy(canUndoDescription = canUndo) }
+            try {
+                autoSave.flushAndSave()
+                _events.send(AddEditNoteUiEvent.NavigateBack)
+            } catch (_: Exception) {
+                isNavigatingBack = false
+            }
         }
     }
 
@@ -303,12 +265,7 @@ class AddEditNoteViewModel(
     private fun observeTags() {
         viewModelScope.launch {
             tagsState.collect { tags ->
-                _uiState.update { state ->
-                    val validGuids = state.selectedTagGuids.filter { guid ->
-                        tags.any { tag -> tag.guid == guid }
-                    }.toSet()
-                    state.copy(tags = tags, selectedTagGuids = validGuids)
-                }
+                editor.applyAvailableTags(tags)
             }
         }
     }
