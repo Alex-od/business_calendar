@@ -30,9 +30,7 @@ fun AppNavigation(
 
     LaunchedEffect(pendingEditEventId) {
         val eventId = pendingEditEventId ?: return@LaunchedEffect
-        navController.navigate(Screen.EditEvent.createRoute(eventId)) {
-            launchSingleTop = true
-        }
+        navController.navigateToEditEvent(eventId)
         onPendingEditEventConsumed()
     }
 
@@ -43,21 +41,17 @@ fun AppNavigation(
 
         composable(Screen.Calendar.route) {
             CalendarScreen(
-                onAddEvent = { dayMillis ->
-                    navController.navigate(Screen.AddEvent.createRoute(dayMillis))
-                },
-                onEditEvent = { eventId ->
-                    navController.navigate(Screen.EditEvent.createRoute(eventId))
-                },
-                onOpenAiSettings = { navController.navigate(Screen.AiSettings.route) },
-                onOpenTags = { navController.navigate(Screen.TagSettings.createRoute()) },
+                onAddEvent = navController::navigateToAddEvent,
+                onEditEvent = navController::navigateToEditEvent,
+                onOpenAiSettings = { navController.navigateForward(Screen.AiSettings.route) },
+                onOpenTags = { navController.navigateToTagSettings() },
             )
         }
 
         composable(Screen.AiSettings.route) {
             AiSettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onOpenAiActions = { navController.navigate(Screen.AiActions.route) },
+                onOpenAiActions = { navController.navigateForward(Screen.AiActions.route) },
             )
         }
 
@@ -87,9 +81,7 @@ fun AppNavigation(
                         tagGuid,
                     )
                 },
-                onOpenTag = { tagGuid ->
-                    navController.navigate(Screen.TagNotes.createRoute(tagGuid))
-                },
+                onOpenTag = navController::navigateToTagNotes,
             )
         }
 
@@ -105,9 +97,7 @@ fun AppNavigation(
             TagNotesScreen(
                 tagGuid = tagGuid,
                 onNavigateBack = { navController.popBackStack() },
-                onEditNote = { noteId ->
-                    navController.navigate(Screen.EditEvent.createRoute(noteId))
-                },
+                onEditNote = navController::navigateToEditEvent,
             )
         }
 
@@ -127,8 +117,8 @@ fun AppNavigation(
                 initialDayMillis = selectedDay,
                 editingNoteId = null,
                 onNavigateBack = { navController.popBackStack() },
-                onOpenTags = { navController.navigate(Screen.TagSettings.createRoute(returnAfterCreate = true)) },
-                onOpenAiActions = { navController.navigate(Screen.AiActions.route) },
+                onOpenTags = { navController.navigateToTagSettings(returnAfterCreate = true) },
+                onOpenAiActions = { navController.navigateForward(Screen.AiActions.route) },
                 createdTagGuid = createdTagGuid.value,
                 onCreatedTagGuidConsumed = {
                     backStack.savedStateHandle[Screen.TagSettings.RESULT_CREATED_TAG_GUID] = null
@@ -152,8 +142,8 @@ fun AppNavigation(
                 initialDayMillis = System.currentTimeMillis(),
                 editingNoteId = eventId,
                 onNavigateBack = { navController.popBackStack() },
-                onOpenTags = { navController.navigate(Screen.TagSettings.createRoute(returnAfterCreate = true)) },
-                onOpenAiActions = { navController.navigate(Screen.AiActions.route) },
+                onOpenTags = { navController.navigateToTagSettings(returnAfterCreate = true) },
+                onOpenAiActions = { navController.navigateForward(Screen.AiActions.route) },
                 createdTagGuid = createdTagGuid.value,
                 onCreatedTagGuidConsumed = {
                     backStack.savedStateHandle[Screen.TagSettings.RESULT_CREATED_TAG_GUID] = null
