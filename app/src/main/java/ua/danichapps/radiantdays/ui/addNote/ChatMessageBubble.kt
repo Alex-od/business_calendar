@@ -4,6 +4,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -11,8 +12,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -102,21 +107,34 @@ internal fun ChatMessageBubble(
                 Spacer(Modifier.height(4.dp))
             }
             Box {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = bubbleColor,
-                    modifier = Modifier.combinedClickable(
+                Row(verticalAlignment = Alignment.Top) {
+                    Surface(
+                        shape = RoundedCornerShape(16.dp),
+                        color = bubbleColor,
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .combinedClickable(
+                                enabled = !loading,
+                                onClick = callbacks.onOpenEditor,
+                                onLongClick = callbacks.onShowMenu,
+                            ),
+                    ) {
+                        ChatBubbleText(
+                            text = displayContent,
+                            textColor = textColor,
+                            selectable = false,
+                            showCollapsed = showCollapsed,
+                        )
+                    }
+                    IconButton(
+                        onClick = callbacks.onShowMenu,
                         enabled = !loading,
-                        onClick = callbacks.onOpenEditor,
-                        onLongClick = callbacks.onShowMenu,
-                    ),
-                ) {
-                    ChatBubbleText(
-                        text = displayContent,
-                        textColor = textColor,
-                        selectable = false,
-                        showCollapsed = showCollapsed,
-                    )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = stringResource(R.string.action_more),
+                        )
+                    }
                 }
 
                 DropdownMenu(

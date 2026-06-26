@@ -56,6 +56,7 @@ internal fun ChatMessageEditScreen(
         onVoiceInputUnavailable = callbacks.onVoiceInputUnavailable,
     )
     val bodyTextStyle = MaterialTheme.typography.bodyLarge
+    val notePlaceholder = stringResource(R.string.note_placeholder)
     val title = when (messageRole) {
         AiChatRole.USER -> stringResource(R.string.ai_chat_you)
         AiChatRole.ASSISTANT -> stringResource(R.string.ai_chat_assistant)
@@ -103,6 +104,7 @@ internal fun ChatMessageEditScreen(
                         .padding(bottom = ContentHorizontalPadding),
                     textStyle = bodyTextStyle,
                     minLines = 1,
+                    placeholder = notePlaceholder,
                 )
             }
         }

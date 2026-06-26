@@ -17,9 +17,14 @@ internal class NoteSaveCoordinator(
     private val widgetUpdater: CalendarWidgetUpdater,
     private val updateState: ((AddEditNoteUiState) -> AddEditNoteUiState) -> Unit,
     private val onSaveError: suspend (MessageKey, List<String>, Throwable?) -> Unit,
+    private val onSaveStatusChange: (NoteSaveStatus) -> Unit,
 ) {
     suspend fun save(state: AddEditNoteUiState) {
-        if (state.title.isBlank() && state.description.isBlank() && state.aiChatMessages.isEmpty()) return
+        if (state.title.isBlank() && state.description.isBlank() && state.aiChatMessages.isEmpty()) {
+            onSaveStatusChange(NoteSaveStatus.Idle)
+            return
+        }
+        onSaveStatusChange(NoteSaveStatus.Saving)
         val event = state.toCalendarEvent()
         if (state.editingNoteId != null) {
             updateEventUseCase(event)
@@ -33,8 +38,10 @@ internal class NoteSaveCoordinator(
                     }
                     syncAlarm(event)
                     widgetUpdater.refresh()
+                    onSaveStatusChange(NoteSaveStatus.Saved)
                 }
                 .onError { exception, key, args ->
+                    onSaveStatusChange(NoteSaveStatus.Idle)
                     onSaveError(key, args, exception)
                 }
         } else {
@@ -53,8 +60,10 @@ internal class NoteSaveCoordinator(
                         alarmScheduler.schedule(saved)
                     }
                     widgetUpdater.refresh()
+                    onSaveStatusChange(NoteSaveStatus.Saved)
                 }
                 .onError { exception, key, args ->
+                    onSaveStatusChange(NoteSaveStatus.Idle)
                     onSaveError(key, args, exception)
                 }
         }

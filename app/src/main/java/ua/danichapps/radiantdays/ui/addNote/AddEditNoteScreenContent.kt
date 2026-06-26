@@ -22,11 +22,16 @@ import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.material3.DrawerState
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 import ua.danichapps.radiantdays.domain.model.visibleContent
 import ua.danichapps.radiantdays.ui.common.KeyboardInsetsPolicy
 import ua.danichapps.radiantdays.ui.common.NoteDisplayStyles
@@ -42,10 +47,19 @@ internal fun AddEditNoteScreenContent(
     locale: Locale,
 ) {
     var editingMessageIndex by remember { mutableIntStateOf(-1) }
+    val drawerState = rememberDrawerState(DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
+    val screenCallbacks = remember(callbacks, scope, drawerState) {
+        callbacks.copy(
+            onOpenSettings = {
+                scope.launch { drawerState.open() }
+            },
+        )
+    }
 
     Box(Modifier.fillMaxSize()) {
         Scaffold(
-            topBar = { TagToolbar(uiState = uiState, callbacks = callbacks) },
+            topBar = { TagToolbar(uiState = uiState, callbacks = screenCallbacks) },
             snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = { AddEditNoteAiChatBottomBar(uiState = uiState, callbacks = callbacks) },
         ) { padding ->
@@ -56,6 +70,7 @@ internal fun AddEditNoteScreenContent(
                     callbacks = callbacks,
                     locale = locale,
                     padding = padding,
+                    drawerState = drawerState,
                     onMessageClick = { editingMessageIndex = it },
                 )
             }
@@ -122,6 +137,7 @@ private fun AddEditNoteBody(
     callbacks: AddEditNoteScreenCallbacks,
     locale: Locale,
     padding: PaddingValues,
+    drawerState: DrawerState,
     onMessageClick: (Int) -> Unit,
 ) {
     Box(Modifier.fillMaxSize().padding(padding)) {
@@ -129,6 +145,7 @@ private fun AddEditNoteBody(
             uiState = uiState,
             callbacks = callbacks,
             locale = locale,
+            drawerState = drawerState,
             onMessageClick = onMessageClick,
             modifier = Modifier.fillMaxSize(),
         )

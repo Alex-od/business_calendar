@@ -105,6 +105,7 @@ val presentationModule = module {
             getEventsByTagUseCase = get(),
             getTagsUseCase = get(),
             deleteEventUseCase = get(),
+            addEventUseCase = get(),
             alarmScheduler = get(),
             widgetUpdater = get(),
             errorStrings = get(),

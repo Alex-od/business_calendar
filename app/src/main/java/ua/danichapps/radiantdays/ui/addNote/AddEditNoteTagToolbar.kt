@@ -10,11 +10,16 @@ import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
@@ -60,7 +65,40 @@ internal fun TagToolbar(
                 onTagsExpandedToggle = callbacks.onTagsExpandedToggle,
                 onOpenTags = callbacks.onOpenTags,
             )
+            NoteSaveStatusIndicator(saveStatus = uiState.saveStatus)
+            IconButton(onClick = callbacks.onOpenSettings) {
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = stringResource(R.string.note_settings),
+                    tint = if (uiState.alarmTimeMillis != null) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
+            }
         }
+    }
+}
+
+@Composable
+private fun NoteSaveStatusIndicator(saveStatus: NoteSaveStatus) {
+    when (saveStatus) {
+        NoteSaveStatus.Saving -> {
+            CircularProgressIndicator(
+                modifier = Modifier.size(20.dp),
+                strokeWidth = 2.dp,
+            )
+        }
+        NoteSaveStatus.Saved -> {
+            Icon(
+                imageVector = Icons.Default.Check,
+                contentDescription = stringResource(R.string.note_save_status),
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp),
+            )
+        }
+        NoteSaveStatus.Idle -> Unit
     }
 }
 

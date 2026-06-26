@@ -10,6 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -33,6 +34,7 @@ internal fun NoteForm(
     uiState: AddEditNoteUiState,
     callbacks: AddEditNoteScreenCallbacks,
     locale: Locale,
+    drawerState: DrawerState,
     modifier: Modifier = Modifier,
     onMessageClick: (Int) -> Unit = {},
 ) {
@@ -64,6 +66,7 @@ internal fun NoteForm(
     val horizontalPadding = 4.dp
 
     NotesSettingsDrawer(
+        drawerState = drawerState,
         modifier = modifier
             .fillMaxSize()
             .padding(vertical = horizontalPadding),

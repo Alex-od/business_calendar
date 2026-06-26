@@ -135,6 +135,11 @@
     <string name="note_format_list">Список</string>
     <string name="note_editor_show_format_toolbar">Показувати панель редагування</string>
     <string name="note_editor_show_ai_chat">Показувати ІІ чат</string>
+    <string name="note_placeholder">Нотатка</string>
+    <string name="note_settings">Налаштування нотатки</string>
+    <string name="note_save_status">Статус збереження</string>
+    <string name="note_deleted">Нотатку видалено</string>
+    <string name="tag_notes_updated_short">Змінено %1$s</string>
 
     <!-- AI models -->
     <string name="ai_model_nano_desc">Швидка та економна</string>

@@ -96,6 +96,7 @@ internal data class AddEditNoteScreenCallbacks(
     val onAiActionSelected: (String) -> Unit = {},
     val onOpenTags: () -> Unit = {},
     val onOpenAiActions: () -> Unit = {},
+    val onOpenSettings: () -> Unit = {},
 )
 
 /** Binds screen actions and UI helpers into a stable callbacks holder. */

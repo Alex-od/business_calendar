@@ -37,4 +37,6 @@ data class AddEditNoteUiState(
 
     val showFormatToolbar: Boolean = true,
     val showAiChat: Boolean = true,
+
+    val saveStatus: NoteSaveStatus = NoteSaveStatus.Idle,
 )

@@ -213,6 +213,7 @@ internal fun NoteEditor(
     onMessageClick: (Int) -> Unit = {},
 ) {
     val bodyTextStyle = MaterialTheme.typography.bodyLarge
+    val notePlaceholder = stringResource(R.string.note_placeholder)
     val hasAiChatContent = uiState.aiChatMessages.isNotEmpty() || uiState.aiChatLoading
     val isAiChatMessagesVisible = uiState.showAiChat && hasAiChatContent
     val hasAiResponse = uiState.aiChatMessages.any { it.role == AiChatRole.ASSISTANT }
@@ -257,6 +258,7 @@ internal fun NoteEditor(
                             textStyle = bodyTextStyle,
                             minLines = 1,
                             scrollEnabled = needsScroll,
+                            placeholder = notePlaceholder,
                         )
                     }
                 } else {
@@ -269,6 +271,7 @@ internal fun NoteEditor(
                             .weight(1f),
                         textStyle = bodyTextStyle,
                         minLines = 1,
+                        placeholder = notePlaceholder,
                     )
                 }
             }

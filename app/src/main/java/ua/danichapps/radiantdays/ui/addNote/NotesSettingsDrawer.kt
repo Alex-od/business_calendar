@@ -12,7 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.DrawerState
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -25,7 +25,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
@@ -50,6 +49,7 @@ private val NotesSettingsDrawerWidth = 280.dp
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotesSettingsDrawer(
+    drawerState: DrawerState,
     alarmTimeMillis: Long?,
     notificationMinutesBefore: Int,
     dateFormat: SimpleDateFormat,
@@ -66,7 +66,6 @@ fun NotesSettingsDrawer(
     modifier: Modifier = Modifier,
     content: @Composable () -> Unit,
 ) {
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var showAiLogScreen by remember { mutableStateOf(false) }
 

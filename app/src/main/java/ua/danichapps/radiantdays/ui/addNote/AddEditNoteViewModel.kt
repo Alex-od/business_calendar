@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import ua.danichapps.radiantdays.domain.model.Tag
 import ua.danichapps.radiantdays.domain.model.normalizeFirstUserMessage
@@ -60,6 +61,7 @@ class AddEditNoteViewModel(
         onSaveError = { key, args, cause ->
             _events.send(AddEditNoteUiEvent.ShowError(key, args, cause))
         },
+        onSaveStatusChange = ::onSaveStatusChange,
     )
     private val autoSave = NoteAutoSaveController(
         scope = viewModelScope,
@@ -274,6 +276,18 @@ class AddEditNoteViewModel(
         viewModelScope.launch {
             ai.visibleActions.collect { actions ->
                 _uiState.update { it.copy(visibleAiActions = actions) }
+            }
+        }
+    }
+
+    private fun onSaveStatusChange(status: NoteSaveStatus) {
+        _uiState.update { it.copy(saveStatus = status) }
+        if (status == NoteSaveStatus.Saved) {
+            viewModelScope.launch {
+                delay(2_000)
+                if (_uiState.value.saveStatus == NoteSaveStatus.Saved) {
+                    _uiState.update { it.copy(saveStatus = NoteSaveStatus.Idle) }
+                }
             }
         }
     }

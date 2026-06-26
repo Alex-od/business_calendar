@@ -1,12 +1,15 @@
 package ua.danichapps.radiantdays.ui.common
 
 import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -40,6 +43,7 @@ fun RichNoteTextField(
     modifier: Modifier = Modifier,
     minLines: Int = 1,
     scrollEnabled: Boolean = true,
+    placeholder: String? = null,
 ) {
     val scrollState = rememberScrollState()
     val view = LocalView.current
@@ -98,6 +102,18 @@ fun RichNoteTextField(
                 .then(scrollModifier)
                 .onFocusChanged { state -> onFocusChange(state.isFocused) },
             minLines = minLines,
+            decorationBox = { innerTextField ->
+                Box(modifier = Modifier.fillMaxWidth()) {
+                    if (value.text.isEmpty() && placeholder != null) {
+                        Text(
+                            text = placeholder,
+                            style = resolvedTextStyle,
+                            color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        )
+                    }
+                    innerTextField()
+                }
+            },
         )
     }
 }
