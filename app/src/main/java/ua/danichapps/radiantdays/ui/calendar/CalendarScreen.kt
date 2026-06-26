@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -162,11 +161,10 @@ fun CalendarScreen(
                         }
                     } else {
                         EventListForDay(
-                            events        = uiState.eventsForDay,
-                            locale        = locale,
+                            events         = uiState.eventsForDay,
                             isFilterActive = uiState.selectedFilterTagGuids.isNotEmpty(),
-                            onEditEvent   = onEditEvent,
-                            onDeleteEvent = viewModel::deleteEvent,
+                            onEditEvent    = onEditEvent,
+                            onDeleteEvent  = viewModel::deleteEvent,
                         )
                     }
                 }
@@ -346,7 +344,6 @@ private fun MonthGrid(
 @Composable
 private fun EventListForDay(
     events: List<CalendarEvent>,
-    locale: Locale,
     isFilterActive: Boolean,
     onEditEvent: (Long) -> Unit,
     onDeleteEvent: (Long) -> Unit,
@@ -373,7 +370,6 @@ private fun EventListForDay(
         items(events, key = { it.id }) { event ->
             EventCard(
                 event    = event,
-                locale   = locale,
                 onClick  = { onEditEvent(event.id) },
                 onDelete = { onDeleteEvent(event.id) },
             )
@@ -384,13 +380,9 @@ private fun EventListForDay(
 @Composable
 private fun EventCard(
     event: CalendarEvent,
-    locale: Locale,
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    // SimpleDateFormat is not thread-safe; one instance per composable is safe in single-threaded Compose
-    val timeFormat = remember(locale) { SimpleDateFormat("HH:mm", locale) }
-
     val contentAlpha = if (event.isCompleted) 0.5f else 1f
 
     Card(
@@ -408,14 +400,8 @@ private fun EventCard(
             modifier          = Modifier.fillMaxWidth().padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier.size(10.dp).clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.primary),
-            )
-            Column(
-                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Row(verticalAlignment = Alignment.Top) {
                     if (event.alarmTimeMillis != null) {
                         Icon(
                             Icons.Default.Alarm,
@@ -436,30 +422,9 @@ private fun EventCard(
                             },
                         ),
                         fontWeight = FontWeight.SemiBold,
-                        maxLines   = 1,
+                        maxLines   = 3,
                         overflow   = TextOverflow.Ellipsis,
-                    )
-                }
-                if (event.title.isNotBlank() && event.description.isNotBlank()) {
-                    Text(
-                        text = event.description,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-                if (!event.isAllDay) {
-                    Text(
-                        text  = "${timeFormat.format(Date(event.startTimeMillis))} - ${timeFormat.format(Date(event.endTimeMillis))}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                } else {
-                    Text(
-                        text  = stringResource(R.string.calendar_all_day),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier   = Modifier.weight(1f),
                     )
                 }
             }
