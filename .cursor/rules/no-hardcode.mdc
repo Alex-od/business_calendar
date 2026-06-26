@@ -1,0 +1,53 @@
+---
+description: Запрет хардкода user-facing строк и UI-текста во всём проекте
+alwaysApply: true
+---
+
+# Без хардкода (RadiantCalendar)
+
+При написании и ревью Kotlin/Android-кода **сначала читай и применяй** skill **compose-kotlin-agent-skills**:
+- sub-skill `android-kotlin-compose` — `stringResource`, banned antipatterns
+- reference `00-banned-antipatterns.md` — row 3: `Text("Hello")` → `stringResource`
+
+**Ноль хардкода** пользовательских строк на любом языке — во всём проекте.
+
+## UI (`:app`, Compose)
+
+```kotlin
+// ❌ BAD
+Text("Сохранить")
+OutlinedTextField(placeholder = { Text("Заметка") })
+Icon(..., contentDescription = "Удалить")
+
+// ✅ GOOD
+Text(stringResource(R.string.action_save))
+OutlinedTextField(placeholder = { Text(stringResource(R.string.note_placeholder)) })
+Icon(..., contentDescription = stringResource(R.string.action_delete))
+```
+
+- Snackbar, dialog title/body, error на экране — только из `strings.xml` (или `DomainErrorStrings`).
+- Цвета — `MaterialTheme.colorScheme`, не hex в composable.
+
+## Domain (`:domain`)
+
+- Без user-facing литералов. Ошибки — `MessageKey`, тексты резолвятся в UI-слое.
+
+## Data (`:data`)
+
+- Без локализованных строк в entity/seed/DAO.
+- Seed с текстами для пользователя — только из `:app` (`Context`, `AppStrings`).
+
+## Локализация
+
+Новая строка → сразу три файла:
+- `app/src/main/res/values/strings.xml`
+- `values-ru/strings.xml`
+- `values-uk/strings.xml`
+
+Не дублировать один и тот же текст в Kotlin и XML.
+
+## Допустимые исключения
+
+- Unit/UI tests — литералы в arrange/assert.
+- Технические идентификаторы (route prefix, table name), не показываемые пользователю.
+- Debug-логи — по правилам проекта, не как UI copy.
