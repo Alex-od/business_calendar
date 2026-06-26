@@ -43,7 +43,9 @@ fun AppNavigation(
             CalendarScreen(
                 onAddEvent = navController::navigateToAddEvent,
                 onEditEvent = navController::navigateToEditEvent,
-                onOpenAiSettings = { navController.navigateForward(Screen.AiSettings.route) },
+                onOpenAiSettings = {
+                    navController.navigateAuxiliary(Screen.AiSettings.route, routePrefix = "ai_settings")
+                },
                 onOpenTags = { navController.navigateToTagSettings() },
             )
         }
@@ -51,7 +53,9 @@ fun AppNavigation(
         composable(Screen.AiSettings.route) {
             AiSettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onOpenAiActions = { navController.navigateForward(Screen.AiActions.route) },
+                onOpenAiActions = {
+                    navController.navigateAuxiliary(Screen.AiActions.route, routePrefix = "ai_actions")
+                },
             )
         }
 
@@ -118,7 +122,9 @@ fun AppNavigation(
                 editingNoteId = null,
                 onNavigateBack = { navController.popBackStack() },
                 onOpenTags = { navController.navigateToTagSettings(returnAfterCreate = true) },
-                onOpenAiActions = { navController.navigateForward(Screen.AiActions.route) },
+                onOpenAiActions = {
+                    navController.navigateAuxiliary(Screen.AiActions.route, routePrefix = "ai_actions")
+                },
                 createdTagGuid = createdTagGuid.value,
                 onCreatedTagGuidConsumed = {
                     backStack.savedStateHandle[Screen.TagSettings.RESULT_CREATED_TAG_GUID] = null
@@ -143,7 +149,9 @@ fun AppNavigation(
                 editingNoteId = eventId,
                 onNavigateBack = { navController.popBackStack() },
                 onOpenTags = { navController.navigateToTagSettings(returnAfterCreate = true) },
-                onOpenAiActions = { navController.navigateForward(Screen.AiActions.route) },
+                onOpenAiActions = {
+                    navController.navigateAuxiliary(Screen.AiActions.route, routePrefix = "ai_actions")
+                },
                 createdTagGuid = createdTagGuid.value,
                 onCreatedTagGuidConsumed = {
                     backStack.savedStateHandle[Screen.TagSettings.RESULT_CREATED_TAG_GUID] = null
