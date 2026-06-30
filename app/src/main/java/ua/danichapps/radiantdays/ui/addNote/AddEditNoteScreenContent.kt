@@ -140,7 +140,12 @@ private fun AddEditNoteBody(
     drawerState: DrawerState,
     onMessageClick: (Int) -> Unit,
 ) {
-    Box(Modifier.fillMaxSize().padding(padding)) {
+    Box(
+        KeyboardInsetsPolicy.editorContentModifier(
+            base = Modifier.fillMaxSize().padding(padding),
+            hasImeAwareBottomBar = uiState.showAiChat,
+        ),
+    ) {
         NoteForm(
             uiState = uiState,
             callbacks = callbacks,
