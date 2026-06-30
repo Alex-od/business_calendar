@@ -56,6 +56,34 @@ fun CompactFilterChip(
 }
 
 @Composable
+fun ReadOnlyTagChip(
+    name: String,
+    color: EventColor,
+    modifier: Modifier = Modifier,
+) {
+    val accent = color.toComposeColor()
+    Surface(
+        modifier = modifier,
+        shape = FilterChipDefaults.shape,
+        color = accent.copy(alpha = 0.28f),
+        border = FilterChipDefaults.filterChipBorder(enabled = true, selected = false),
+    ) {
+        Row(
+            modifier = Modifier.padding(TagChipSpacing.ChipContentPadding),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            TagColorDot(color = color)
+            Spacer(Modifier.width(TagChipSpacing.DotToLabelSpacing))
+            Text(
+                text = name,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+@Composable
 fun ColoredTagChip(
     name: String,
     color: EventColor,

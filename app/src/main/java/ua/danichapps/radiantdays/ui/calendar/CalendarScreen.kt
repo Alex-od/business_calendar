@@ -68,8 +68,11 @@ import ua.danichapps.radiantdays.locale.AppLocaleStore
 import ua.danichapps.radiantdays.calendar.buildMonthDays
 import ua.danichapps.radiantdays.calendar.sameDay
 import ua.danichapps.radiantdays.domain.model.CalendarEvent
+import ua.danichapps.radiantdays.domain.model.Tag
 import ua.danichapps.radiantdays.domain.model.displayHeadline
+import ua.danichapps.radiantdays.ui.common.NoteTagsRow
 import ua.danichapps.radiantdays.ui.common.dialog.TagFilterDialog
+import ua.danichapps.radiantdays.ui.common.tagsForEvent
 import ua.danichapps.radiantdays.ui.settings.SettingsDrawer
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -162,6 +165,7 @@ fun CalendarScreen(
                     } else {
                         EventListForDay(
                             events         = uiState.eventsForDay,
+                            allTags        = uiState.filterDialogTags.filterNot { it.isUntaggedFilter },
                             isFilterActive = uiState.selectedFilterTagGuids.isNotEmpty(),
                             onEditEvent    = onEditEvent,
                             onDeleteEvent  = viewModel::deleteEvent,
@@ -344,6 +348,7 @@ private fun MonthGrid(
 @Composable
 private fun EventListForDay(
     events: List<CalendarEvent>,
+    allTags: List<Tag>,
     isFilterActive: Boolean,
     onEditEvent: (Long) -> Unit,
     onDeleteEvent: (Long) -> Unit,
@@ -370,6 +375,7 @@ private fun EventListForDay(
         items(events, key = { it.id }) { event ->
             EventCard(
                 event    = event,
+                allTags  = allTags,
                 onClick  = { onEditEvent(event.id) },
                 onDelete = { onDeleteEvent(event.id) },
             )
@@ -380,10 +386,12 @@ private fun EventListForDay(
 @Composable
 private fun EventCard(
     event: CalendarEvent,
+    allTags: List<Tag>,
     onClick: () -> Unit,
     onDelete: () -> Unit,
 ) {
     val contentAlpha = if (event.isCompleted) 0.5f else 1f
+    val eventTags = remember(event.tagGuids, allTags) { allTags.tagsForEvent(event) }
 
     Card(
         modifier = Modifier
@@ -425,6 +433,12 @@ private fun EventCard(
                         maxLines   = 3,
                         overflow   = TextOverflow.Ellipsis,
                         modifier   = Modifier.weight(1f),
+                    )
+                }
+                if (eventTags.isNotEmpty()) {
+                    NoteTagsRow(
+                        tags = eventTags,
+                        modifier = Modifier.padding(top = 6.dp),
                     )
                 }
             }
