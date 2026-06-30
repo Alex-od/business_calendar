@@ -20,7 +20,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.ui.common.NoteDisplayStyles
 import java.text.SimpleDateFormat
@@ -63,13 +62,11 @@ internal fun NoteForm(
         onVoiceInputUnavailable = callbacks.onVoiceInputUnavailable,
     )
 
-    val horizontalPadding = 4.dp
-
     NotesSettingsDrawer(
         drawerState = drawerState,
         modifier = modifier
             .fillMaxSize()
-            .padding(vertical = horizontalPadding),
+            .padding(vertical = AddEditNoteContentPadding),
         alarmTimeMillis = uiState.alarmTimeMillis,
         notificationMinutesBefore = uiState.notificationMinutesBefore,
         dateFormat = dateFormat,
@@ -92,7 +89,7 @@ internal fun NoteForm(
             onMessageClick = onMessageClick,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = horizontalPadding),
+                .padding(horizontal = AddEditNoteContentPadding),
         )
     }
 

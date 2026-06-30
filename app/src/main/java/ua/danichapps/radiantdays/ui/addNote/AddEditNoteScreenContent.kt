@@ -181,7 +181,7 @@ private fun AddEditNoteAiChatBottomBar(
         modifier = KeyboardInsetsPolicy.aiChatInputBarModifier(
             Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp),
+                .padding(horizontal = AddEditNoteContentPadding),
         ),
     )
 }

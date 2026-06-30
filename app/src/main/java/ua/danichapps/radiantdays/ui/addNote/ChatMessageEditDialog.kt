@@ -18,14 +18,11 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.dp
 import java.util.Locale
 import ua.danichapps.radiantdays.R
 import ua.danichapps.radiantdays.domain.model.AiChatRole
 import ua.danichapps.radiantdays.ui.common.NoteDisplayStyles
 import ua.danichapps.radiantdays.ui.common.RichNoteTextField
-
-private val ContentHorizontalPadding = 8.dp
 
 /** Full-screen editor for a single chat message (title: You / AI). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -86,7 +83,7 @@ internal fun ChatMessageEditScreen(
                 modifier = Modifier
                     .padding(padding)
                     .fillMaxSize()
-                    .padding(horizontal = ContentHorizontalPadding),
+                    .padding(horizontal = AddEditNoteContentPadding),
             ) {
                 NoteEditorToolbarRow(
                     state = editorState,
@@ -101,7 +98,7 @@ internal fun ChatMessageEditScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f)
-                        .padding(bottom = ContentHorizontalPadding),
+                        .padding(bottom = AddEditNoteContentPadding),
                     textStyle = bodyTextStyle,
                     minLines = 1,
                     placeholder = notePlaceholder,
