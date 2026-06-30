@@ -50,6 +50,43 @@ class AiApiRequestLogFormatterTest {
     }
 
     @Test
+    fun `formatHttp includes messages array in pretty-printed body`() {
+        val requestBody = """
+            {
+              "model": "gpt-4o",
+              "messages": [
+                {"role": "user", "content": "Question"},
+                {"role": "assistant", "content": "Answer"}
+              ]
+            }
+        """.trimIndent()
+        val request = Request.Builder()
+            .url("https://api.openai.com/v1/chat/completions")
+            .post(requestBody.toRequestBody(JSON_MEDIA_TYPE))
+            .build()
+        val response = Response.Builder()
+            .request(request)
+            .protocol(Protocol.HTTP_1_1)
+            .code(200)
+            .message("OK")
+            .body("""{"choices":[{"message":{"content":"Hi"}}]}""".toResponseBody(JSON_MEDIA_TYPE))
+            .build()
+
+        val log = AiApiRequestLogFormatter.formatHttp(
+            source = AiApiRequestSource.AI_CHAT,
+            request = request,
+            requestBody = requestBody,
+            response = response,
+            responseBody = """{"choices":[{"message":{"content":"Hi"}}]}""",
+        )
+
+        assertTrue(log.contains("\"messages\""))
+        assertTrue(log.contains("Question"))
+        assertTrue(log.contains("Answer"))
+        assertTrue(log.contains("\"role\""))
+    }
+
+    @Test
     fun `formatNetworkError includes request and exception`() {
         val request = Request.Builder()
             .url("https://api.openai.com/v1/chat/completions")

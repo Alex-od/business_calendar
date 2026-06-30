@@ -178,6 +178,80 @@ class OpenAiCompletionClientTest {
         assertError(result, MessageKey.AI_PARSE_ERROR)
     }
 
+    @Test
+    fun `completeConversation sends multi-message history in order`() = runTest {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setBody(chatCompletionJson("Done")),
+        )
+
+        client.completeConversation(
+            listOf(
+                AiChatMessage(AiChatRole.USER, "First"),
+                AiChatMessage(AiChatRole.ASSISTANT, "Reply"),
+                AiChatMessage(AiChatRole.USER, "Follow up"),
+            ),
+        )
+
+        val requestBody = server.takeRequest().body.readUtf8()
+        val firstIndex = requestBody.indexOf("\"First\"")
+        val replyIndex = requestBody.indexOf("\"Reply\"")
+        val followUpIndex = requestBody.indexOf("\"Follow up\"")
+        assertTrue(firstIndex in 0 until replyIndex)
+        assertTrue(replyIndex in 0 until followUpIndex)
+        assertTrue(requestBody.contains("\"role\":\"user\""))
+        assertTrue(requestBody.contains("\"role\":\"assistant\""))
+    }
+
+    @Test
+    fun `completeConversation uses apiContent in request body`() = runTest {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setBody(chatCompletionJson("Ok")),
+        )
+
+        client.completeConversation(
+            listOf(
+                AiChatMessage(
+                    role = AiChatRole.USER,
+                    content = "Note text",
+                    apiContent = "Resolved prompt for API",
+                ),
+            ),
+        )
+
+        val requestBody = server.takeRequest().body.readUtf8()
+        assertTrue(requestBody.contains("Resolved prompt for API"))
+        assertTrue(!requestBody.contains("Note text"))
+    }
+
+    @Test
+    fun `log contains full message history in request section`() = runTest {
+        server.enqueue(
+            MockResponse()
+                .setResponseCode(200)
+                .setBody(chatCompletionJson("Response")),
+        )
+
+        client.completeConversation(
+            listOf(
+                AiChatMessage(AiChatRole.USER, "Question"),
+                AiChatMessage(AiChatRole.ASSISTANT, "Answer"),
+                AiChatMessage(AiChatRole.USER, "Next"),
+            ),
+        )
+
+        val log = logSink.savedLog.orEmpty()
+        val requestSection = log.substringAfter("=== REQUEST ===").substringBefore("=== RESPONSE ===")
+        assertTrue(requestSection.contains("\"messages\""))
+        assertTrue(requestSection.contains("\"role\": \"user\"") || requestSection.contains("\"role\":\"user\""))
+        assertTrue(requestSection.contains("Question"))
+        assertTrue(requestSection.contains("Answer"))
+        assertTrue(requestSection.contains("Next"))
+    }
+
     private fun createClient(shouldLog: Boolean): OpenAiCompletionClient =
         OpenAiCompletionClient(
             apiKey = "test-key",
